@@ -19,11 +19,6 @@ import CodeManagementSettings from '@/components/settings/code-management-settin
 import AuditLogSettings from '@/components/settings/audit-log-settings';
 import ChangeHistorySettings from '@/components/settings/change-history-settings';
 import WorkplaceSettings from '@/components/settings/workplace-settings';
-import DepartmentSettings from '@/components/settings/department-settings';
-import PositionRankSettings from '@/components/settings/position-rank-settings';
-import PositionTitleSettings from '@/components/settings/position-title-settings';
-import JobCategorySettings from '@/components/settings/job-category-settings';
-import SalaryGradeSettings from '@/components/settings/salary-grade-settings';
 import MenuPermissionSettings from '@/components/settings/menu-permission-settings';
 
 export default function SettingsPage() {
@@ -36,11 +31,6 @@ export default function SettingsPage() {
         <TabsList className="flex flex-wrap h-auto gap-1 mb-6">
           <TabsTrigger value="company">회사정보</TabsTrigger>
           <TabsTrigger value="branding">브랜딩</TabsTrigger>
-          <TabsTrigger value="department">부서관리</TabsTrigger>
-          <TabsTrigger value="position-rank">직급관리</TabsTrigger>
-          <TabsTrigger value="position-title">직책관리</TabsTrigger>
-          <TabsTrigger value="job-category">직무관리</TabsTrigger>
-          <TabsTrigger value="salary-grade">호봉관리</TabsTrigger>
           <TabsTrigger value="work">근무설정</TabsTrigger>
           <TabsTrigger value="leave">휴가설정</TabsTrigger>
           <TabsTrigger value="workplace">사업장</TabsTrigger>
@@ -65,21 +55,6 @@ export default function SettingsPage() {
 
         <TabsContent value="company">
           <CompanyInfoSettings />
-        </TabsContent>
-        <TabsContent value="department">
-          <DepartmentSettings />
-        </TabsContent>
-        <TabsContent value="position-rank">
-          <PositionRankSettings />
-        </TabsContent>
-        <TabsContent value="position-title">
-          <PositionTitleSettings />
-        </TabsContent>
-        <TabsContent value="job-category">
-          <JobCategorySettings />
-        </TabsContent>
-        <TabsContent value="salary-grade">
-          <SalaryGradeSettings />
         </TabsContent>
         <TabsContent value="work">
           <WorkScheduleSettings />

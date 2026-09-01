@@ -2,8 +2,8 @@
 
 import { use, useState } from 'react';
 import { Breadcrumb } from '@/components/layout/breadcrumb';
-import { EmployeeCard } from '@/components/employee/employee-card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { EmployeeSummaryPanel } from '@/components/employee/employee-summary-panel';
+import { EmployeeAssignmentHistory } from '@/components/employee/employee-assignment-history';
 import { EmployeeFilesTab } from '@/components/employee/employee-files-tab';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -15,7 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Pencil, FileText, ChevronDown, Banknote, ClipboardList, Plus, Trash2, Paperclip } from 'lucide-react';
+import { Pencil, FileText, ChevronDown, ClipboardList, Plus, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useEmployeeStore } from '@/lib/stores/employee-store';
 import { useCodeMap, CODE } from '@/lib/hooks/use-code';
@@ -41,6 +41,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
   const educationHistories = useEmployeeStore((s) => s.educationHistories);
   const certifications = useEmployeeStore((s) => s.certifications);
   const familyMembers = useEmployeeStore((s) => s.familyMembers);
+  const assignments = useEmployeeStore((s) => s.assignments);
 
   // Store actions
   const addCareerHistory = useEmployeeStore((s) => s.addCareerHistory);
@@ -84,6 +85,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     .filter((c) => c.employee_id === id)
     .sort((a, b) => (b.issue_date ?? '').localeCompare(a.issue_date ?? ''));
   const family = familyMembers.filter((f) => f.employee_id === id);
+  const assignmentCount = assignments.filter((a) => a.employee_id === id).length;
 
   if (!employee) {
     return (
@@ -213,26 +215,24 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
         </div>
       </div>
 
-      <EmployeeCard employee={employee} />
+      <div className="mt-6 flex flex-col gap-4 lg:flex-row lg:items-start">
+        <EmployeeSummaryPanel
+          employee={employee}
+          sections={[
+            { id: 'basic', label: '기본정보' },
+            { id: 'assignments', label: '소속 이력', count: assignmentCount },
+            { id: 'career', label: '경력사항', count: career.length },
+            { id: 'education', label: '학력사항', count: education.length },
+            { id: 'certification', label: '자격증', count: certs.length },
+            { id: 'family', label: '가족사항', count: family.length },
+            { id: 'files', label: '사진·서류' },
+            { id: 'payroll', label: '급여' },
+          ]}
+        />
 
-      <Tabs defaultValue="basic" className="mt-6">
-        <TabsList>
-          <TabsTrigger value="basic">기본정보</TabsTrigger>
-          <TabsTrigger value="career">경력사항</TabsTrigger>
-          <TabsTrigger value="education">학력사항</TabsTrigger>
-          <TabsTrigger value="certification">자격증</TabsTrigger>
-          <TabsTrigger value="family">가족사항</TabsTrigger>
-          <TabsTrigger value="files" className="gap-1">
-            <Paperclip className="h-3.5 w-3.5" />
-            사진·서류
-          </TabsTrigger>
-          <TabsTrigger value="payroll" className="gap-1">
-            <Banknote className="h-3.5 w-3.5" />
-            급여
-          </TabsTrigger>
-        </TabsList>
+        <div className="min-w-0 flex-1 space-y-4">
 
-        <TabsContent value="basic">
+        <section id="basic" className="scroll-mt-4">
           <Card>
             <CardContent className="pt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div><p className="text-sm text-muted-foreground">사원번호</p><p className="font-medium">{employee.employee_number}</p></div>
@@ -244,9 +244,13 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
               <div><p className="text-sm text-muted-foreground">비상연락처</p><p className="font-medium">{employee.emergency_contact_name ? `${employee.emergency_contact_name} (${employee.emergency_contact_relation}) ${employee.emergency_contact_phone}` : '-'}</p></div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </section>
 
-        <TabsContent value="career">
+        <section id="assignments" className="scroll-mt-4">
+          <EmployeeAssignmentHistory employeeId={id} />
+        </section>
+
+        <section id="career" className="scroll-mt-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-base">경력사항 ({career.length}건)</CardTitle>
@@ -301,9 +305,9 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </section>
 
-        <TabsContent value="education">
+        <section id="education" className="scroll-mt-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-base">학력사항 ({education.length}건)</CardTitle>
@@ -362,9 +366,9 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </section>
 
-        <TabsContent value="certification">
+        <section id="certification" className="scroll-mt-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-base">자격증 ({certs.length}건)</CardTitle>
@@ -419,9 +423,9 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </section>
 
-        <TabsContent value="family">
+        <section id="family" className="scroll-mt-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-base">가족사항 ({family.length}명)</CardTitle>
@@ -480,16 +484,17 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </section>
 
-        <TabsContent value="payroll">
+        <section id="payroll" className="scroll-mt-4">
           <EmployeePayrollTab employee={employee} />
-        </TabsContent>
+        </section>
 
-        <TabsContent value="files">
+        <section id="files" className="scroll-mt-4">
           <EmployeeFilesTab employeeId={id} />
-        </TabsContent>
-      </Tabs>
+        </section>
+        </div>
+      </div>
 
       {/* Dialogs */}
       <CareerDialog

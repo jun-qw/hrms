@@ -6,7 +6,16 @@ import { Breadcrumb } from '@/components/layout/breadcrumb';
 import { EmployeeRegister } from '@/components/employee/employee-register';
 import { StatsCard } from '@/components/dashboard/stats-card';
 import { Button } from '@/components/ui/button';
-import { Plus, Users, UserCheck, UserX, UserMinus, Building2, FileSpreadsheet } from 'lucide-react';
+import {
+  Plus,
+  Users,
+  UserCheck,
+  UserX,
+  UserMinus,
+  Building2,
+  FileSpreadsheet,
+  ScrollText,
+} from 'lucide-react';
 import { useEmployeeStore } from '@/lib/stores/employee-store';
 
 export default function EmployeesPage() {
@@ -37,6 +46,12 @@ export default function EmployeesPage() {
             <Button variant="outline">
               <FileSpreadsheet className="mr-2 h-4 w-4" />
               데이터 가져오기
+            </Button>
+          </Link>
+          <Link href="/employees/roster">
+            <Button variant="outline">
+              <ScrollText className="mr-2 h-4 w-4" />
+              노동자명부
             </Button>
           </Link>
           <Link href="/employees/workplace-assignment">

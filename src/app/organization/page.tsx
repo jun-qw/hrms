@@ -9,6 +9,11 @@ import { SimulationToolbar } from '@/components/org-chart/simulation-toolbar';
 import { DragOverlay } from '@/components/org-chart/drag-overlay';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import DepartmentSettings from '@/components/settings/department-settings';
+import PositionRankSettings from '@/components/settings/position-rank-settings';
+import PositionTitleSettings from '@/components/settings/position-title-settings';
+import JobCategorySettings from '@/components/settings/job-category-settings';
+import SalaryGradeSettings from '@/components/settings/salary-grade-settings';
 import {
   cloneTree,
   findDepartment,
@@ -228,7 +233,30 @@ export default function OrganizationPage() {
     <div>
       <DragOverlay payload={dragPayload} />
       <Breadcrumb />
-      <h1 className="text-2xl font-bold mb-6">조직도</h1>
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold">조직관리</h1>
+        <p className="mt-0.5 text-sm text-muted-foreground">
+          조직도와 그 조직도를 이루는 기준정보(부서·직급·직책·직무·호봉)를 한 화면에서 봅니다.
+        </p>
+      </div>
+
+      <Tabs defaultValue="chart-view">
+        <TabsList className="mb-4">
+          <TabsTrigger value="chart-view">조직도</TabsTrigger>
+          <TabsTrigger value="departments">부서</TabsTrigger>
+          <TabsTrigger value="ranks">직급</TabsTrigger>
+          <TabsTrigger value="titles">직책</TabsTrigger>
+          <TabsTrigger value="jobs">직무</TabsTrigger>
+          <TabsTrigger value="grades">호봉</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="departments"><DepartmentSettings /></TabsContent>
+        <TabsContent value="ranks"><PositionRankSettings /></TabsContent>
+        <TabsContent value="titles"><PositionTitleSettings /></TabsContent>
+        <TabsContent value="jobs"><JobCategorySettings /></TabsContent>
+        <TabsContent value="grades"><SalaryGradeSettings /></TabsContent>
+
+        <TabsContent value="chart-view">
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-1">
           <Card>
@@ -284,6 +312,8 @@ export default function OrganizationPage() {
           </Tabs>
         </div>
       </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

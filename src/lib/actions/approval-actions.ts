@@ -18,6 +18,7 @@ import { eq, inArray } from 'drizzle-orm';
 import { db, schema } from '@/lib/db';
 import { getSession } from '@/lib/auth/session';
 import { toApp, toDb } from './mappers';
+import { createAssignment, deleteAssignment } from './assignment-actions';
 import type { Approval, ApprovalLine, Appointment } from '@/types';
 import type { WorkflowTemplate, WorkflowInstance } from '@/lib/stores/workflow-store';
 
@@ -348,6 +349,27 @@ export async function createAppointment(
       .insert(schema.appointments)
       .values(values as typeof schema.appointments.$inferInsert)
       .returning();
+
+    // 발령은 소속 이력을 남기는 것이 본체입니다. 여기서 구간을 열어 두면
+    // 발령일이 되는 순간 인사정보에 자동으로 반영되고, 지난 시점 조회도
+    // 같은 자료에서 나옵니다. 퇴사 발령은 소속을 바꾸는 것이 아니므로 제외.
+    if (row && row.type !== 'resignation') {
+      const [current] = await db
+        .select()
+        .from(schema.employees)
+        .where(eq(schema.employees.id, row.employeeId));
+      await createAssignment({
+        employeeId: row.employeeId,
+        effectiveFrom: row.effectiveDate,
+        // 발령서에 적히지 않은 항목은 직전 값을 그대로 이어받습니다.
+        departmentId: row.newDepartmentId ?? current?.departmentId ?? null,
+        positionRankId: row.newPositionRankId ?? current?.positionRankId ?? null,
+        positionTitleId: row.newPositionTitleId ?? current?.positionTitleId ?? null,
+        workplaceId: current?.workplaceId ?? null,
+        appointmentId: row.id,
+        reason: row.reason,
+      });
+    }
     return toApp<Appointment>(row);
   } catch (err) {
     console.error('createAppointment failed:', err);
@@ -379,6 +401,17 @@ export async function updateAppointment(
 export async function deleteAppointment(id: string): Promise<boolean> {
   try {
     await assertHrWrite();
+
+    // 발령을 지우면 그 발령이 만든 소속 구간도 함께 걷어내고 직전 구간을
+    // 다시 엽니다. 발령만 지우면 이력에 근거 없는 구간이 남습니다.
+    const orphans = await db
+      .select()
+      .from(schema.employeeAssignments)
+      .where(eq(schema.employeeAssignments.appointmentId, id));
+    for (const assignment of orphans) {
+      await deleteAssignment(assignment.id);
+    }
+
     await db.delete(schema.appointments).where(eq(schema.appointments.id, id));
     return true;
   } catch (err) {

@@ -11,6 +11,7 @@ import { useEmployeeStore } from '@/lib/stores/employee-store';
 import { updateEmployee as persistEmployee } from '@/lib/actions/employee-actions';
 import type { Employee } from '@/types';
 import { REGISTER_PRESETS, buildRegisterColumns } from './employee-register-columns';
+import { DepartmentTreeFilter, departmentSubtree } from './department-tree-filter';
 
 type StatusTab = 'active' | 'on_leave' | 'left' | 'all';
 
@@ -39,6 +40,7 @@ export function EmployeeRegister() {
   const [tab, setTab] = useState<StatusTab>('active');
   const [preset, setPreset] = useState<string>('basic');
   const [groupByDept, setGroupByDept] = useState(false);
+  const [departmentId, setDepartmentId] = useState<string | null>(null);
 
   // ── lookups ──────────────────────────────────────────────────────────────
 
@@ -92,10 +94,27 @@ export function EmployeeRegister() {
     return columns.map((c) => ({ ...c, hidden: !wanted.has(c.id) }));
   }, [columns, preset]);
 
-  const rows = useMemo(() => {
+  const statusRows = useMemo(() => {
     const match = STATUS_TABS.find((t) => t.id === tab)?.match ?? (() => true);
     return employees.filter(match);
   }, [employees, tab]);
+
+  // 부서를 고르면 그 하위 부서까지 함께 걸립니다.
+  const rows = useMemo(() => {
+    if (!departmentId) return statusRows;
+    const scope = departmentSubtree(departments, departmentId);
+    return statusRows.filter((e) => e.department_id && scope.has(e.department_id));
+  }, [statusRows, departments, departmentId]);
+
+  // 트리에 붙는 인원수는 지금 보고 있는 재직 상태 기준입니다.
+  const countByDepartment = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const e of statusRows) {
+      if (!e.department_id) continue;
+      counts.set(e.department_id, (counts.get(e.department_id) ?? 0) + 1);
+    }
+    return counts;
+  }, [statusRows]);
 
   const counts = useMemo(
     () =>
@@ -182,6 +201,16 @@ export function EmployeeRegister() {
         ))}
       </div>
 
+      <div className="flex items-start gap-3">
+        <DepartmentTreeFilter
+          departments={departments}
+          countByDepartment={countByDepartment}
+          totalCount={statusRows.length}
+          selectedId={departmentId}
+          onSelect={setDepartmentId}
+        />
+
+        <div className="min-w-0 flex-1">
       <DataGrid
         key={preset}
         gridKey={`employees:${preset}`}
@@ -231,6 +260,8 @@ export function EmployeeRegister() {
           ) : null
         }
       />
+        </div>
+      </div>
     </div>
   );
 }

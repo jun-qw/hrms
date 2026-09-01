@@ -653,6 +653,24 @@ export interface PayrollDetail {
   payroll_item?: PayrollItem;
 }
 
+/**
+ * 소속 이력 한 구간 — 언제부터 언제까지 어느 부서·직급·직책이었는지.
+ * `effective_to`가 null이면 현재 유효한 구간입니다.
+ */
+export interface EmployeeAssignment {
+  id: string;
+  employee_id: string;
+  effective_from: string;
+  effective_to: string | null;
+  department_id: string | null;
+  position_rank_id: string | null;
+  position_title_id: string | null;
+  workplace_id: string | null;
+  appointment_id: string | null;
+  reason: string | null;
+  created_at: string;
+}
+
 export interface Appointment {
   id: string;
   employee_id: string;

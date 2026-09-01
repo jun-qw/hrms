@@ -28,6 +28,7 @@ import type {
   EmployeeStatus,
   JobCategory,
   SalaryGrade,
+  EmployeeAssignment,
 } from '@/types';
 
 // ---------------------------------------------------------------------------
@@ -46,6 +47,8 @@ interface EmployeeState {
   familyMembers: FamilyMember[];
   jobCategories: JobCategory[];
   salaryGrades: SalaryGrade[];
+  /** 소속 이력. 발령이 만들고, 사원카드와 시점 조회가 읽습니다. */
+  assignments: EmployeeAssignment[];
 }
 
 interface EmployeeActions {
@@ -227,6 +230,7 @@ export const useEmployeeStore = create<EmployeeStore>()((set, get) => {
     educationHistories: [],
     certifications: [],
     familyMembers: [],
+    assignments: [],
     jobCategories: [],
     salaryGrades: [],
 
@@ -241,6 +245,8 @@ export const useEmployeeStore = create<EmployeeStore>()((set, get) => {
           set((s) => ({
             employees: s.employees.map((e) => (e.id === employee.id ? saved : e)),
           }));
+          // The server also opened this person's first assignment interval.
+          void reload();
         } else {
           failSync('employee');
         }

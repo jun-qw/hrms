@@ -151,3 +151,47 @@ export const employeeDocuments = pgTable(
 );
 
 export type EmployeeDocumentRow = typeof employeeDocuments.$inferSelect;
+
+// --- Assignment history (소속 이력) ---
+
+/**
+ * Where an employee sat, from when to when.
+ *
+ * `employees` carries only the *current* department / rank / title, which is
+ * enough to draw today's org chart and no help at all for anything else:
+ * "what did the org look like in March", "recalculate June payroll under the
+ * grade they held then", "print a career certificate" all need the value that
+ * was in force on a given date.
+ *
+ * So the intervals here are the record, and the columns on `employees` are a
+ * cache of whichever interval covers today. Intervals for one employee never
+ * overlap: opening a new one closes the previous at the day before.
+ *
+ * A row usually comes from an 인사발령; `appointmentId` points back at it.
+ * Rows without one are the opening assignment created at hire, or a manual
+ * correction.
+ */
+export const employeeAssignments = pgTable(
+  'employee_assignments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    employeeId: uuid('employee_id')
+      .notNull()
+      .references(() => employees.id, { onDelete: 'cascade' }),
+    effectiveFrom: date('effective_from').notNull(),
+    /** null while this is the assignment currently in force. */
+    effectiveTo: date('effective_to'),
+    departmentId: uuid('department_id').references(() => departments.id),
+    positionRankId: uuid('position_rank_id').references(() => positionRanks.id),
+    positionTitleId: uuid('position_title_id').references(() => positionTitles.id),
+    /** Plain text, matching employees.workplaceId. */
+    workplaceId: text('workplace_id'),
+    /** The 인사발령 this came from, when it came from one. */
+    appointmentId: uuid('appointment_id'),
+    reason: text('reason'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  },
+  (t) => [index('idx_employee_assignments_asof').on(t.employeeId, t.effectiveFrom)],
+);
+
+export type EmployeeAssignment = typeof employeeAssignments.$inferSelect;

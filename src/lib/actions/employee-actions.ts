@@ -19,6 +19,7 @@ import type {
   EducationHistory,
   Certification,
   FamilyMember,
+  EmployeeAssignment,
   JobCategory,
   SalaryGrade,
 } from '@/types';
@@ -52,6 +53,11 @@ async function assertEmployeeWrite(employeeId: string): Promise<void> {
 }
 
 import { toApp, toDb } from './mappers';
+import {
+  createAssignment,
+  fetchAssignments,
+  syncCurrentAssignments,
+} from './assignment-actions';
 
 // ---------------------------------------------------------------------------
 // Read: full module dataset
@@ -68,11 +74,18 @@ export interface EmployeeModuleData {
   educationHistories: EducationHistory[];
   certifications: Certification[];
   familyMembers: FamilyMember[];
+  /** 소속 이력 전체 — 사원카드의 발령 이력과 시점 조회에 씁니다. */
+  assignments: EmployeeAssignment[];
 }
 
 export async function fetchEmployeeData(): Promise<EmployeeModuleData | null> {
   try {
     await assertRead();
+
+    // 발령일이 지난 예약 발령을 현재값으로 옮겨 담습니다. 자료를 읽을 때마다
+    // 한 번 맞추므로 별도 스케줄러가 필요 없습니다.
+    await syncCurrentAssignments();
+
     const [
       departments,
       positionRanks,
@@ -84,6 +97,7 @@ export async function fetchEmployeeData(): Promise<EmployeeModuleData | null> {
       educationHistories,
       certifications,
       familyMembers,
+      assignments,
     ] = await Promise.all([
       // Every list is ordered explicitly. Without it PostgreSQL returns heap
       // order, which moves a row to the end of the result set the moment it is
@@ -99,6 +113,7 @@ export async function fetchEmployeeData(): Promise<EmployeeModuleData | null> {
       db.select().from(schema.educationHistories).orderBy(asc(schema.educationHistories.startDate)),
       db.select().from(schema.certifications).orderBy(asc(schema.certifications.issueDate)),
       db.select().from(schema.familyMembers).orderBy(asc(schema.familyMembers.name)),
+      fetchAssignments(),
     ]);
     return {
       departments: departments.map((r) => toApp<Department>(r)),
@@ -111,6 +126,7 @@ export async function fetchEmployeeData(): Promise<EmployeeModuleData | null> {
       educationHistories: educationHistories.map((r) => toApp<EducationHistory>(r)),
       certifications: certifications.map((r) => toApp<Certification>(r)),
       familyMembers: familyMembers.map((r) => toApp<FamilyMember>(r)),
+      assignments,
     };
   } catch (err) {
     console.error('fetchEmployeeData failed:', err);
@@ -130,6 +146,20 @@ export async function createEmployee(employee: Employee): Promise<Employee | nul
       .insert(schema.employees)
       .values(values as typeof schema.employees.$inferInsert)
       .returning();
+
+    // Every employee starts with an open assignment interval from their hire
+    // date; without one the as-of lookup would have nothing to return for them.
+    if (row) {
+      await createAssignment({
+        employeeId: row.id,
+        effectiveFrom: row.hireDate,
+        departmentId: row.departmentId,
+        positionRankId: row.positionRankId,
+        positionTitleId: row.positionTitleId,
+        workplaceId: row.workplaceId,
+        reason: '입사',
+      });
+    }
     return toApp<Employee>(row);
   } catch (err) {
     console.error('createEmployee failed:', err);

@@ -64,6 +64,13 @@
       "when": 1788239101857,
       "tag": "0008_add_grid_views",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1788241029337,
+      "tag": "0009_add_employee_assignments",
+      "breakpoints": true
     }
   ]
 }
