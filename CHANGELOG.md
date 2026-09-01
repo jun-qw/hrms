@@ -1,0 +1,57 @@
+# 변경 내역
+
+## 2026-09-01 — 중소기업용 개편 1단계 (그리드 플랫폼)
+
+인사 업무를 잘 모르는 담당자도 쓸 수 있도록 화면을 정리하고, 모든 대장 화면의 토대가 될
+그리드를 구축했습니다.
+
+### 그리드 플랫폼 (신규)
+
+| 파일 | 내용 |
+|------|------|
+| `src/components/grid/data-grid.tsx` | 공통 `<DataGrid>` — 열 고정·정렬·필터·인라인 편집·소계·가상화 |
+| `src/components/grid/types.ts` | 열 정의(`GridColumn`)와 저장 구성(`GridViewState`) |
+| `src/components/grid/use-grid-view.ts` | 열 구성 상태 + localStorage 복원 + 열 집합 재조정 |
+| `src/components/grid/grid-toolbar.tsx` | 검색·열 선택·밀도·저장된 구성·내보내기 |
+| `src/components/grid/grid-paste.ts` | 엑셀 클립보드(TSV) 파서와 셀 단위 검증 |
+| `src/components/grid/grid-paste-dialog.tsx` | 붙여넣기 검토 창 — 정상 행만 저장 |
+| `src/components/grid/grid-format.ts` | 값 표시·정렬 비교 |
+| `src/lib/actions/grid-export-actions.ts` | ExcelJS 서버 생성 (틀고정·자동필터·숫자서식·합계행) |
+| `src/lib/actions/grid-view-actions.ts` | 저장된 화면 구성 CRUD |
+| `drizzle/0008_add_grid_views.sql` | `grid_views` 테이블 |
+
+### 인력대장
+
+- `/employees`를 8열·10행 페이지네이션 표에서 그리드 기반 **인력대장**으로 교체
+- 재직/휴직/퇴직/전체 탭, 열 구성 프리셋 6종(기본·연락처·급여·계약수습·입퇴사·노동자명부)
+- 부서·직급·직책·고용형태·입사일·상태 등을 셀에서 바로 수정, 엑셀에서 붙여넣기
+- 부서별 소계, 엑셀·CSV 내보내기
+
+### 버그 수정
+
+- **목록 순서가 불안정했습니다.** `fetchEmployeeData()`의 모든 조회에 `ORDER BY`가 없어
+  PostgreSQL 힙 순서로 반환되었고, 행을 수정하면 그 행이 결과 맨 끝으로 이동했습니다.
+  인라인 편집 그리드에서는 방금 고친 행이 화면 밖으로 사라지는 문제가 되어, 사번·레벨·정렬
+  순서 기준의 명시적 정렬을 추가했습니다.
+- 편집 가능한 셀에서 행 클릭 이동과 더블클릭 편집이 충돌해 편집기를 열 수 없었습니다.
+  행 클릭 이동을 없애고 행 왼쪽의 ↗ 버튼으로 상세를 열도록 바꿨습니다.
+- 부서별 소계·합계 라벨이 첫 열 너비에 잘렸습니다. 소계가 시작되는 열 앞까지 라벨이
+  `grid-column: span`으로 펼쳐지도록 수정했습니다.
+
+### 회사 정보
+
+- 파나시아 관련 정보(회사명·사업자번호·조직 시드·CHANGELOG·문서)를 모두 제거
+- 대한오토텍(주) / 621-81-98896 기준으로 기본값·브랜딩 교체
+- 초기 인력 명부 55명 적재 (`src/lib/demo-data/employee-seed.ts`) — 확보된 값은 성명과 회사
+  이메일뿐이라 부서·직급·직책·입사일은 자리표시 값이며, 인력대장에서 교체하는 것을 전제로 함
+
+### 범위에서 제외한 모듈
+
+출장비 정산 · 채용관리 · 교육관리 · 인사평가 · 전자계약 · 4대보험 신고를 라우트·메뉴·설정 탭·
+스토어·서버 액션·시드·DB 테이블까지 제거했습니다 (`drizzle/0007_drop_talent_and_trip_expense.sql`).
+
+### 화면
+
+- 다크모드 제거 — `next-themes` 의존성, `.dark` 토큰 세트, `dark:` 유틸리티 157개를 걷어내고
+  흰 바탕 단일 테마로 고정. 설정의 테마 선택 항목도 삭제
+- 사이드바 메뉴 15개 → 11개

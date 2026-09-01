@@ -1,0 +1,9 @@
+# Normalise text files in the repository.
+* text=auto
+
+# Files consumed inside the Linux container must keep LF endings, otherwise a
+# Windows checkout produces `#!/bin/sh\r` and the container fails to start.
+*.sh text eol=lf
+Dockerfile text eol=lf
+docker-entrypoint.sh text eol=lf
+*.yml text eol=lf

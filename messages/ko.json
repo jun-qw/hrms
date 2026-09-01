@@ -1,0 +1,115 @@
+{
+  "common": {
+    "save": "저장",
+    "cancel": "취소",
+    "edit": "수정",
+    "delete": "삭제",
+    "search": "검색",
+    "next": "다음",
+    "prev": "이전",
+    "confirm": "확인",
+    "close": "닫기",
+    "required": "필수",
+    "loading": "불러오는 중...",
+    "noData": "데이터가 없습니다",
+    "searchPlaceholder": "검색..."
+  },
+  "menu": {
+    "dashboard": "대시보드",
+    "myPage": "마이페이지",
+    "organization": "조직도",
+    "employees": "인사정보",
+    "appointments": "인사발령",
+    "attendance": "근태관리",
+    "leave": "휴가관리",
+    "payroll": "급여관리",
+    "training": "교육관리",
+    "approval": "전자결재",
+    "contracts": "전자계약",
+    "auditLog": "감사로그",
+    "settings": "설정",
+    "recruitment": "채용관리",
+    "evaluation": "평가관리"
+  },
+  "menuDesc": {
+    "dashboard": "메인 대시보드",
+    "myPage": "내 정보 관리",
+    "organization": "조직 구조 관리",
+    "employees": "사원 정보 관리",
+    "appointments": "인사발령 관리",
+    "attendance": "출퇴근/근태 관리",
+    "leave": "휴가 신청/관리",
+    "payroll": "급여 계산/관리",
+    "training": "교육 과정/이수 관리",
+    "approval": "전자결재 시스템",
+    "contracts": "근로계약서 관리",
+    "auditLog": "시스템 감사 로그",
+    "settings": "시스템 설정"
+  },
+  "menuGroup": {
+    "home": "홈",
+    "hr": "인사관리",
+    "work": "근무관리",
+    "payroll": "급여관리",
+    "talent": "인재개발",
+    "support": "업무지원",
+    "system": "시스템"
+  },
+  "header": {
+    "myInfo": "내 정보",
+    "logout": "로그아웃",
+    "kbdHint": "⌘K"
+  },
+  "commandPalette": {
+    "title": "글로벌 검색",
+    "description": "직원, 메뉴를 검색합니다",
+    "inputPlaceholder": "검색어를 입력하세요... (직원, 메뉴)",
+    "empty": "검색 결과가 없습니다.",
+    "groupEmployees": "직원",
+    "groupMenus": "메뉴"
+  },
+  "language": {
+    "korean": "한국어",
+    "english": "English",
+    "labelKo": "한",
+    "labelEn": "EN"
+  },
+  "role": {
+    "admin": "시스템관리자",
+    "hr_manager": "인사담당자",
+    "dept_manager": "부서관리자",
+    "employee": "일반사원"
+  },
+  "notification": {
+    "title": "알림",
+    "unreadBadge": "{count}개 미확인",
+    "markAllRead": "모두 읽음",
+    "clearAllConfirm": "모든 알림을 삭제하시겠습니까?",
+    "empty": "알림이 없습니다.",
+    "timeAgo": {
+      "justNow": "방금",
+      "minutes": "{count}분 전",
+      "hours": "{count}시간 전",
+      "days": "{count}일 전"
+    }
+  },
+  "toast": {
+    "saved": "저장되었습니다",
+    "deleted": "삭제되었습니다",
+    "updated": "수정되었습니다",
+    "error": "오류가 발생했습니다",
+    "networkError": "네트워크 오류가 발생했습니다",
+    "requiredField": "필수 항목을 입력해주세요"
+  },
+  "auth": {
+    "signIn": "로그인",
+    "subtitle": "인사관리시스템",
+    "signInDescription": "계정 정보를 입력해 주세요.",
+    "quickLoginTitle": "데모 빠른 로그인",
+    "email": "이메일",
+    "password": "비밀번호",
+    "invalidCredentials": "이메일 또는 비밀번호가 올바르지 않습니다.",
+    "inactiveAccount": "비활성화된 계정입니다.",
+    "serverError": "로그인에 실패했습니다. 다시 시도해주세요."
+  }
+}

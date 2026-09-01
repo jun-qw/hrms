@@ -1,0 +1,18 @@
+node_modules
+.next
+dist
+.git
+.github
+.claude
+.pglite
+docs
+"P (2)"
+*.md
+!README.md
+.env
+.env.*
+!.env.docker.example
+npm-debug.log*
+coverage
+.vscode
+.idea

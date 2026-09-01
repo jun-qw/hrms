@@ -1,0 +1,54 @@
+# HRMS — single-host deployment.
+#
+#   cp .env.docker.example .env
+#   # set SESSION_SECRET and the passwords, then:
+#   docker compose up -d
+#
+# The app waits for the database, applies migrations and seeds defaults on
+# startup, so there is no separate install step.
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: hrms-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-hrms}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-hrms}
+    volumes:
+      - hrms-pgdata:/var/lib/postgresql/data
+    # Not published by default — only the app needs to reach it. Uncomment to
+    # connect a database client from the host.
+    # ports:
+    #   - '5432:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-hrms} -d ${POSTGRES_DB:-hrms}']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build:
+      context: .
+    image: hrms:latest
+    container_name: hrms-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-hrms}
+      DB_DRIVER: pg
+      AUTH_MODE: db
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET in .env}
+      SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-8}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@example.com}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:?set SEED_ADMIN_PASSWORD in .env}
+      SEED_ADMIN_NAME: ${SEED_ADMIN_NAME:-Administrator}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-false}
+    ports:
+      - '${APP_PORT:-3000}:3000'
+
+volumes:
+  hrms-pgdata:

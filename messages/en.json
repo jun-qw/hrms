@@ -1,0 +1,115 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "search": "Search",
+    "next": "Next",
+    "prev": "Previous",
+    "confirm": "Confirm",
+    "close": "Close",
+    "required": "Required",
+    "loading": "Loading...",
+    "noData": "No data",
+    "searchPlaceholder": "Search..."
+  },
+  "menu": {
+    "dashboard": "Dashboard",
+    "myPage": "My Page",
+    "organization": "Organization",
+    "employees": "Employees",
+    "appointments": "Appointments",
+    "attendance": "Attendance",
+    "leave": "Leave",
+    "payroll": "Payroll",
+    "training": "Training",
+    "approval": "Approvals",
+    "contracts": "Contracts",
+    "auditLog": "Audit Log",
+    "settings": "Settings",
+    "recruitment": "Recruitment",
+    "evaluation": "Evaluation"
+  },
+  "menuDesc": {
+    "dashboard": "Main dashboard",
+    "myPage": "Manage my profile",
+    "organization": "Organization structure",
+    "employees": "Employee records",
+    "appointments": "HR appointments",
+    "attendance": "Attendance management",
+    "leave": "Leave requests",
+    "payroll": "Payroll management",
+    "training": "Training programs",
+    "approval": "Electronic approval",
+    "contracts": "Employment contracts",
+    "auditLog": "System audit log",
+    "settings": "System settings"
+  },
+  "menuGroup": {
+    "home": "Home",
+    "hr": "HR",
+    "work": "Work",
+    "payroll": "Payroll",
+    "talent": "Talent",
+    "support": "Support",
+    "system": "System"
+  },
+  "header": {
+    "myInfo": "My Info",
+    "logout": "Logout",
+    "kbdHint": "⌘K"
+  },
+  "commandPalette": {
+    "title": "Global Search",
+    "description": "Search employees and menus",
+    "inputPlaceholder": "Type to search... (employees, menus)",
+    "empty": "No results.",
+    "groupEmployees": "Employees",
+    "groupMenus": "Menus"
+  },
+  "language": {
+    "korean": "한국어",
+    "english": "English",
+    "labelKo": "한",
+    "labelEn": "EN"
+  },
+  "role": {
+    "admin": "System Admin",
+    "hr_manager": "HR Manager",
+    "dept_manager": "Department Manager",
+    "employee": "Employee"
+  },
+  "notification": {
+    "title": "Notifications",
+    "unreadBadge": "{count} unread",
+    "markAllRead": "Mark all read",
+    "clearAllConfirm": "Delete all notifications?",
+    "empty": "No notifications.",
+    "timeAgo": {
+      "justNow": "just now",
+      "minutes": "{count}m ago",
+      "hours": "{count}h ago",
+      "days": "{count}d ago"
+    }
+  },
+  "toast": {
+    "saved": "Saved.",
+    "deleted": "Deleted.",
+    "updated": "Updated.",
+    "error": "An error occurred.",
+    "networkError": "Network error.",
+    "requiredField": "Please fill in required fields."
+  },
+  "auth": {
+    "signIn": "Sign in",
+    "subtitle": "Human Resource Management System",
+    "signInDescription": "Enter your account credentials to continue.",
+    "quickLoginTitle": "Demo quick sign-in",
+    "email": "Email",
+    "password": "Password",
+    "invalidCredentials": "Invalid email or password.",
+    "inactiveAccount": "This account has been deactivated.",
+    "serverError": "Sign-in failed. Please try again."
+  }
+}
