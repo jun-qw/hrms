@@ -318,7 +318,7 @@ export function DataGrid<T extends { id: string }>({
         pasteEnabled={Boolean(onEdit) && editableColumns.length > 0}
       />
 
-      <div className="rounded-md border bg-card">
+      <div className="rounded-lg border bg-card">
         <div
           ref={scrollRef}
           className="relative max-h-[calc(100vh-22rem)] min-h-[18rem] overflow-auto"
@@ -326,10 +326,10 @@ export function DataGrid<T extends { id: string }>({
         >
           {/* Header */}
           <div
-            className="sticky top-0 z-20 grid border-b bg-muted/70 backdrop-blur-sm text-xs font-semibold"
+            className="sticky top-0 z-20 grid border-b bg-muted text-[11px] font-medium text-muted-foreground"
             style={{ gridTemplateColumns: gridTemplate }}
           >
-            <div className="sticky left-0 z-10 flex items-center justify-center border-r bg-muted/70 px-2 py-2">
+            <div className="sticky left-0 z-10 flex items-center justify-center border-r bg-muted px-2 py-2">
               <input
                 type="checkbox"
                 aria-label="전체 선택"
@@ -379,12 +379,12 @@ export function DataGrid<T extends { id: string }>({
                   return (
                     <div
                       key={`g-${virtualRow.index}`}
-                      className="grid items-center border-b border-t bg-muted/50 text-xs font-semibold"
+                      className="grid items-center border-b border-t bg-muted/70 text-[11px] font-semibold"
                       style={common}
                     >
-                      <div className="sticky left-0 z-10 h-full border-r bg-muted/50" />
+                      <div className="sticky left-0 z-10 h-full border-r bg-muted/70" />
                       <div
-                        className="sticky z-10 truncate bg-muted/50 px-3"
+                        className="sticky z-10 truncate bg-muted/70 px-3"
                         style={{ left: LEAD_WIDTH, gridColumn: `span ${groupLabelSpan}` }}
                       >
                         {item.label} · {item.count}명
@@ -454,11 +454,11 @@ export function DataGrid<T extends { id: string }>({
                         <div
                           key={column.id}
                           className={cn(
-                            'h-full min-w-0 border-r border-transparent px-3',
+                            'h-full min-w-0 px-3',
                             'flex items-center',
                             alignOf(column) === 'right' && 'justify-end tabular-nums',
                             alignOf(column) === 'center' && 'justify-center',
-                            pinned && 'sticky z-10 border-r-border',
+                            pinned && 'sticky z-10 border-r',
                             pinned && (isSelected ? 'bg-accent-blue-subtle' : 'bg-card'),
                             error && 'bg-red-50 ring-1 ring-inset ring-red-400',
                             column.edit && 'cursor-text',
@@ -494,7 +494,7 @@ export function DataGrid<T extends { id: string }>({
         {/* Grand total */}
         {totalColumns.length > 0 && display.length > 0 && (
           <div
-            className="grid border-t bg-muted/60 py-2 text-xs font-bold"
+            className="grid border-t-2 border-t-border bg-muted py-2 text-[11px] font-bold"
             style={{ gridTemplateColumns: gridTemplate }}
           >
             <div className="border-r" />
@@ -581,7 +581,7 @@ function HeaderCell<T>({
       ref={cellRef}
       className={cn(
         'group relative flex flex-col justify-center gap-1 border-r px-2 py-1.5',
-        pinned && 'sticky z-10 bg-muted/70',
+        pinned && 'sticky z-10 bg-muted',
       )}
       style={pinned ? { left: pinnedLeft } : undefined}
     >

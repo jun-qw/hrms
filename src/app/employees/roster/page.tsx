@@ -71,7 +71,7 @@ export default function WorkerRosterPage() {
         <Breadcrumb />
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold">노동자명부</h1>
+            <h1 className="text-xl font-bold tracking-tight">노동자명부</h1>
             <p className="mt-0.5 text-sm text-muted-foreground">
               근로기준법 제41조에 따른 법정 서식입니다. 기재사항이 고정되어 있어 열을 바꿀 수
               없습니다. 3년간 보존해야 합니다.
@@ -95,13 +95,13 @@ export default function WorkerRosterPage() {
               </button>
             </div>
             <Link href="/employees">
-              <Button variant="outline">
-                <ArrowLeft className="mr-2 h-4 w-4" />
+              <Button variant="outline" size="sm">
+                <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
                 인력대장
               </Button>
             </Link>
-            <Button onClick={() => window.print()}>
-              <Printer className="mr-2 h-4 w-4" />
+            <Button size="sm" onClick={() => window.print()}>
+              <Printer className="mr-1.5 h-3.5 w-3.5" />
               인쇄
             </Button>
           </div>

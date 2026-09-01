@@ -54,46 +54,62 @@
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  /* ------------------------------------------------------------------
+   * 팔레트는 다우오피스 인사관리 화면에서 추출한 값을 기준으로 잡았습니다.
+   * 국내 인사담당자에게 익숙한 화면 톤을 따라가되, 로고·브랜드 요소는
+   * 가져오지 않고 대한오토텍 브랜딩을 그대로 씁니다.
+   *
+   * 성격: 거의 흰 배경(#F8F8F8) 위에 흰 카드, 헤어라인 테두리, 그림자 대신
+   * 얇은 선. 액션은 틸시안 하나로 통일하고 상태·진행률만 민트/블루로 나눕니다.
+   * ------------------------------------------------------------------ */
+  --radius: 0.5rem;
+
+  --background: oklch(0.978 0 0);          /* #F8F8F8 페이지 바탕 */
+  --foreground: oklch(0.216 0 0);          /* #202020 본문 */
+  --card: oklch(1 0 0);                    /* 흰색 카드 */
+  --card-foreground: oklch(0.216 0 0);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.55 0.2 260);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.55 0.2 260);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.55 0.2 260);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.55 0.2 260);
-  --accent-blue: oklch(0.55 0.2 260);
-  --accent-green: oklch(0.6 0.16 155);
-  --accent-amber: oklch(0.75 0.16 75);
-  --accent-purple: oklch(0.55 0.2 300);
-  --accent-blue-subtle: oklch(0.95 0.04 260);
-  --accent-green-subtle: oklch(0.95 0.04 155);
-  --accent-amber-subtle: oklch(0.95 0.04 75);
-  --accent-purple-subtle: oklch(0.95 0.04 300);
+  --popover-foreground: oklch(0.216 0 0);
+
+  --primary: oklch(0.652 0.104 213);       /* #08A8C0 틸시안 — 유일한 액션색 */
+  --primary-foreground: oklch(1 0 0);
+
+  --secondary: oklch(0.955 0 0);           /* #F0F0F0 */
+  --secondary-foreground: oklch(0.32 0 0);
+  --muted: oklch(0.962 0 0);               /* #F2F2F2 표 헤더·보조 면 */
+  --muted-foreground: oklch(0.616 0 0);    /* #909090 보조 텍스트 */
+  --accent: oklch(0.955 0 0);
+  --accent-foreground: oklch(0.32 0 0);
+
+  --destructive: oklch(0.585 0.208 26);
+  --border: oklch(0.925 0 0);              /* #E8E8E8 헤어라인 */
+  --input: oklch(0.878 0 0);               /* #D8D8D8 입력 테두리 */
+  --ring: oklch(0.652 0.104 213);
+
+  --chart-1: oklch(0.652 0.104 213);
+  --chart-2: oklch(0.762 0.114 168);
+  --chart-3: oklch(0.735 0.111 268);
+  --chart-4: oklch(0.812 0.128 92);
+  --chart-5: oklch(0.700 0.132 320);
+
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.216 0 0);
+  --sidebar-primary: oklch(0.652 0.104 213);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.955 0 0);
+  --sidebar-accent-foreground: oklch(0.216 0 0);
+  --sidebar-border: oklch(0.925 0 0);
+  --sidebar-ring: oklch(0.652 0.104 213);
+
+  /* 상태색 — 액션색과 구분되도록 채도를 낮게 잡습니다. */
+  --accent-blue: oklch(0.652 0.104 213);   /* 정보 */
+  --accent-green: oklch(0.706 0.126 168);  /* #48D0A8 정상·완료 */
+  --accent-amber: oklch(0.782 0.132 78);   /* 주의 */
+  --accent-purple: oklch(0.660 0.140 285); /* 브랜드 */
+  --accent-blue-subtle: oklch(0.965 0.022 213);
+  --accent-green-subtle: oklch(0.965 0.026 168);
+  --accent-amber-subtle: oklch(0.968 0.030 78);
+  --accent-purple-subtle: oklch(0.962 0.024 285);
 }
 
 
