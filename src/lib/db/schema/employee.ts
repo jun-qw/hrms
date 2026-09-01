@@ -13,6 +13,24 @@ import {
 import { departments, positionRanks, positionTitles } from './organization';
 
 export const EMPLOYMENT_TYPES = ['regular', 'contract', 'parttime', 'intern'] as const;
+
+/**
+ * 직군 — 어떤 성격의 일을 하는가.
+ *
+ * 고용형태(정규/계약)와도, 급여지급방식(월급/시급)과도 다른 축입니다. 정규직
+ * 현장직과 정규직 사무직은 고용형태가 같지만 급여 계산과 근태 관리가 다르므로
+ * 고용형태로 대신할 수 없습니다. 국내 인사 시스템이 오래 써 온 구분이고,
+ * 파나시아 구 ERP에도 `HU067 부서그룹 = 사무관리직 / 생산현장직`으로 있었습니다.
+ */
+export const JOB_CLASSES = ['office', 'field'] as const;
+
+/**
+ * 급여지급방식.
+ *
+ * 현장직은 통상 시급직입니다 — 강제하지는 않고, 직군을 현장직으로 고르면 시급이
+ * 기본으로 잡히되 담당자가 바꿀 수 있게 둡니다.
+ */
+export const PAY_METHODS = ['monthly', 'annual', 'hourly', 'daily'] as const;
 export const EMPLOYEE_STATUSES = ['active', 'on_leave', 'resigned', 'retired'] as const;
 
 export const employees = pgTable('employees', {
@@ -31,10 +49,20 @@ export const employees = pgTable('employees', {
   positionRankId: uuid('position_rank_id').references(() => positionRanks.id),
   positionTitleId: uuid('position_title_id').references(() => positionTitles.id),
   employmentType: text('employment_type', { enum: EMPLOYMENT_TYPES }).default('regular'),
+  jobClass: text('job_class', { enum: JOB_CLASSES }).notNull().default('office'),
+  payMethod: text('pay_method', { enum: PAY_METHODS }).notNull().default('monthly'),
   hireDate: date('hire_date').notNull(),
   resignationDate: date('resignation_date'),
   status: text('status', { enum: EMPLOYEE_STATUSES }).default('active'),
+  /** 월급제·연봉제의 월 기본급. 시급·일급제에서는 쓰지 않습니다. */
   baseSalary: numeric('base_salary', { precision: 12, scale: 0 }).default('0'),
+  /**
+   * 시급제의 시급, 일급제의 일급.
+   *
+   * 기본급 컬럼 하나에 방식에 따라 다른 의미의 금액을 담으면 "이 숫자가 월급인지
+   * 시급인지" 화면마다 다시 판단해야 하고, 급여에서 그런 모호함은 곧 사고입니다.
+   */
+  hourlyWage: numeric('hourly_wage', { precision: 12, scale: 0 }).default('0'),
   bankName: text('bank_name'),
   bankAccount: text('bank_account'),
   profileImageUrl: text('profile_image_url'),

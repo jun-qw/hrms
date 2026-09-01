@@ -9,7 +9,7 @@ import { DataGrid } from '@/components/grid/data-grid';
 import type { GridEditPatch, GridOption } from '@/components/grid/types';
 import { useEmployeeStore } from '@/lib/stores/employee-store';
 import { updateEmployee as persistEmployee } from '@/lib/actions/employee-actions';
-import type { Employee } from '@/types';
+import { DEFAULT_PAY_METHOD, PAY_METHOD_LABEL, type Employee, type JobClass } from '@/types';
 import { REGISTER_PRESETS, buildRegisterColumns } from './employee-register-columns';
 import { DepartmentTreeFilter, departmentSubtree } from './department-tree-filter';
 import { BulkResignDialog } from './bulk-resign-dialog';
@@ -87,13 +87,21 @@ export function EmployeeRegister() {
     [departmentOptions, rankOptions, titleOptions],
   );
 
-  // A preset is just a saved visibility set, applied through the grid's own
-  // column state — so a person can still tweak it afterwards.
+  // 프리셋은 "무엇을 볼지"와 "어떤 순서로 볼지"를 같이 정합니다. 표시 여부만
+  // 바꾸면 현장직 프리셋에서 시급 열이 상태 뒤로 밀립니다 — 열 순서는 정의
+  // 순서를 따르는데, 시급은 급여 항목이라 정의 뒤쪽에 있기 때문입니다.
   const presetColumns = useMemo(() => {
     const active = REGISTER_PRESETS.find((p) => p.id === preset);
     if (!active) return columns;
     const wanted = new Set(active.columns);
-    return columns.map((c) => ({ ...c, hidden: !wanted.has(c.id) }));
+    const byId = new Map(columns.map((c) => [c.id, c]));
+
+    const shown = active.columns
+      .map((id) => byId.get(id))
+      .filter((c): c is (typeof columns)[number] => Boolean(c))
+      .map((c) => ({ ...c, hidden: false }));
+    const rest = columns.filter((c) => !wanted.has(c.id)).map((c) => ({ ...c, hidden: true }));
+    return [...shown, ...rest];
   }, [columns, preset]);
 
   const statusRows = useMemo(() => {
@@ -138,6 +146,21 @@ export function EmployeeRegister() {
         byRow.set(patch.rowId, existing);
       }
 
+      // 직군을 바꾸면 급여방식도 그 직군의 기본값으로 따라옵니다 — 현장직은
+      // 통상 시급제입니다. 다만 담당자가 이미 기본값과 다르게 지정해 둔
+      // 사람은 건드리지 않습니다. 의도적으로 정한 값을 조용히 덮으면 안 됩니다.
+      const followed: string[] = [];
+      for (const [id, patch] of byRow) {
+        const nextClass = patch.job_class as JobClass | undefined;
+        if (!nextClass || patch.pay_method !== undefined) continue;
+        const employee = employees.find((e) => e.id === id);
+        if (!employee || employee.job_class === nextClass) continue;
+        if (employee.pay_method !== DEFAULT_PAY_METHOD[employee.job_class]) continue;
+
+        patch.pay_method = DEFAULT_PAY_METHOD[nextClass];
+        followed.push(employee.name);
+      }
+
       const results = await Promise.all(
         [...byRow].map(async ([id, patch]) => {
           const saved = await persistEmployee(id, patch as Partial<Employee>);
@@ -149,11 +172,21 @@ export function EmployeeRegister() {
       const failed = results.filter((ok) => !ok).length;
       if (failed > 0) {
         toast.error(`${failed}건을 저장하지 못했습니다.`);
-      } else {
-        toast.success(`${byRow.size}건을 저장했습니다.`);
+        return;
       }
+      if (followed.length > 0) {
+        const method = PAY_METHOD_LABEL[
+          byRow.get(employees.find((e) => e.name === followed[0])?.id ?? '')
+            ?.pay_method as keyof typeof PAY_METHOD_LABEL
+        ];
+        toast.success(
+          `${byRow.size}건을 저장했습니다. 직군이 바뀐 ${followed.length}명은 급여방식도 ${method}로 함께 바꿨습니다.`,
+        );
+        return;
+      }
+      toast.success(`${byRow.size}건을 저장했습니다.`);
     },
-    [updateEmployeeLocal],
+    [updateEmployeeLocal, employees],
   );
 
   // ── render ───────────────────────────────────────────────────────────────

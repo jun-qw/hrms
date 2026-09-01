@@ -57,8 +57,16 @@ export interface PayrollRateSet {
     localTaxRate: number;
   };
 
-  /** 통상시급 산정 기준 월 소정근로시간. */
+  /**
+   * 통상시급 산정 기준 월 소정근로시간 (통상 209).
+   *
+   * 209는 주 40시간에 **주휴시간이 더해진** 값이므로, 이 값을 근무일수로 나눠
+   * 1일 근로시간을 구하면 안 됩니다(약 9.6시간이 나와 20% 과다 계산됩니다).
+   * 1일 근로시간은 아래 `standardDailyHours`를 씁니다.
+   */
   monthlyWorkHours: number;
+  /** 1일 소정근로시간. 시급·일급제의 시간 환산 기준입니다. */
+  standardDailyHours: number;
   /** 가산율 — 근로기준법상 최저치이며 사규로 올릴 수 있습니다. */
   premiums: { overtime: number; night: number; holiday: number };
 }
@@ -110,6 +118,7 @@ export const DEFAULT_RATE_SET: PayrollRateSet = {
   },
 
   monthlyWorkHours: 209,
+  standardDailyHours: 8,
   premiums: { overtime: 1.5, night: 0.5, holiday: 1.5 },
 };
 

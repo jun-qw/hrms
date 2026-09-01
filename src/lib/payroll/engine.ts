@@ -268,8 +268,9 @@ function computeBase(
 
   if (input.payMethod === 'daily') {
     const amount = Math.round(input.baseAmount * att.workedDays);
-    // 일급제의 통상시급은 일급을 1일 소정근로시간으로 나눠 봅니다.
-    const dailyHours = rates.monthlyWorkHours / 21.75;
+    // 일급제의 통상시급은 일급을 1일 소정근로시간으로 나눕니다.
+    // 209 ÷ 21.75가 아닙니다 — 209에는 주휴시간이 들어 있습니다.
+    const dailyHours = rates.standardDailyHours;
     return {
       hourlyWage: Math.round(input.baseAmount / dailyHours),
       proration: null,

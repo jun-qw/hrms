@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { useEmployeeStore } from '@/lib/stores/employee-store';
 import { useLeaveStore } from '@/lib/stores/leave-store';
+import type { JobClass, PayMethod } from '@/types';
 
 /**
  * Flat employee directory (id, name, department name, hire date, rank name)
@@ -21,6 +22,12 @@ export interface DirectoryEmployee {
   hire_date: string;
   position_rank: string;
   base_salary: number;
+  /** 사무직 / 현장직 */
+  job_class: JobClass;
+  /** 월급 · 연봉 · 시급 · 일급 — 급여 계산의 기본급 산정 방식이 갈립니다. */
+  pay_method: PayMethod;
+  /** 시급제의 시급, 일급제의 일급 */
+  hourly_wage: number;
 }
 
 export function useEmployeeDirectory(options?: { activeOnly?: boolean }): DirectoryEmployee[] {
@@ -42,6 +49,9 @@ export function useEmployeeDirectory(options?: { activeOnly?: boolean }): Direct
         hire_date: e.hire_date,
         position_rank: e.position_rank_id ? (rankById.get(e.position_rank_id) ?? '') : '',
         base_salary: e.base_salary ?? 0,
+        job_class: e.job_class ?? 'office',
+        pay_method: e.pay_method ?? 'monthly',
+        hourly_wage: e.hourly_wage ?? 0,
       }));
   }, [employees, departments, ranks, activeOnly]);
 }

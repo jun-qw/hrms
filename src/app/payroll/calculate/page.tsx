@@ -197,6 +197,40 @@ export default function PayrollCalculatePage() {
   /** 사번별 부양가족 수(본인 포함). 소득세 인적공제에 그대로 들어갑니다. */
   const [dependents, setDependents] = useState<Map<string, number>>(new Map());
 
+  /**
+   * 급여방식별 기본급과 통상시급.
+   *
+   * 월급·연봉제는 월 기본급을 소정근로시간으로 나눠 통상시급을 얻고, 시급제는
+   * 시급이 곧 통상시급입니다. 일급제는 1일 소정근로시간으로 환산합니다.
+   */
+  const computeBaseFor = useCallback(
+    (
+      emp: DirectoryEmployee,
+      workedHours: number,
+      workedDays: number,
+      rates: { monthlyWorkHours: number; standardDailyHours: number },
+    ): { baseSalary: number; hourlyWage: number } => {
+      switch (emp.pay_method) {
+        case 'hourly':
+          return {
+            baseSalary: Math.round(emp.hourly_wage * workedHours),
+            hourlyWage: emp.hourly_wage,
+          };
+        case 'daily':
+          return {
+            baseSalary: Math.round(emp.hourly_wage * workedDays),
+            hourlyWage: Math.round(emp.hourly_wage / rates.standardDailyHours),
+          };
+        default:
+          return {
+            baseSalary: emp.base_salary ?? 0,
+            hourlyWage: Math.round((emp.base_salary ?? 0) / rates.monthlyWorkHours),
+          };
+      }
+    },
+    [],
+  );
+
   // 해당 연도 기준값 — 4대보험 요율·비과세 한도·세율 구간이 여기서 옵니다.
   // 개편 전에는 이 값들이 코드 상수였고 설정 화면의 숫자는 계산에 닿지 않았습니다.
   const [rateSet, setRateSet] = useState<ResolvedRateSet>({
@@ -344,9 +378,16 @@ export default function PayrollCalculatePage() {
   const buildEarningRows = useCallback(() => {
     const map = new Map<string, EarningRow>();
     for (const emp of selectedEmployees) {
-      const baseSalary = emp.base_salary ?? 0;
-      const hourlyWage = Math.round(baseSalary / rateSet.rates.monthlyWorkHours);
       const att = attendanceData.get(emp.id);
+
+      // 급여방식에 따라 기본급 산정이 갈립니다. 현장직은 통상 시급제라
+      // 근태 실근로시간이 그대로 기본급이 됩니다.
+      //
+      // 근무일수 × 1일 소정근로시간으로 환산합니다. 월 209시간을 근무일수로
+      // 나누면 안 됩니다 — 209에는 주휴시간이 포함되어 있어 실근로시간보다
+      // 20%가량 부풀려집니다.
+      const workedHours = (att?.workDays ?? 0) * rateSet.rates.standardDailyHours;
+      const { baseSalary, hourlyWage } = computeBaseFor(emp, workedHours, att?.workDays ?? 0, rateSet.rates);
 
       const empSettings = employeePayrollSettings.filter(
         (s) => s.employee_id === emp.id && s.is_active
@@ -381,7 +422,7 @@ export default function PayrollCalculatePage() {
       });
     }
     setEarningRows(map);
-  }, [selectedEmployees, attendanceData, employeePayrollSettings, rateSet]);
+  }, [selectedEmployees, attendanceData, employeePayrollSettings, rateSet, computeBaseFor]);
 
   // ---- Step 4: Build deduction rows ----
 

@@ -17,6 +17,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { useCodeMap, CODE } from '@/lib/hooks/use-code';
 import { isCurrentlyEffective } from '@/lib/utils/effective-status';
+import { DEFAULT_PAY_METHOD, JOB_CLASS_LABEL, PAY_METHOD_LABEL } from '@/types';
 import type { Employee, PositionRank, PositionTitle, Department } from '@/types';
 
 const employeeSchema = z.object({
@@ -34,8 +35,11 @@ const employeeSchema = z.object({
   position_rank_id: z.string().optional(),
   position_title_id: z.string().optional(),
   employment_type: z.enum(['regular', 'contract', 'parttime', 'intern']),
+  job_class: z.enum(['office', 'field']),
+  pay_method: z.enum(['monthly', 'annual', 'hourly', 'daily']),
   hire_date: z.string().min(1, '입사일을 입력하세요'),
   base_salary: z.number().min(0).optional(),
+  hourly_wage: z.number().min(0).optional(),
   bank_name: z.string().optional(),
   bank_account: z.string().optional(),
   emergency_contact_name: z.string().optional(),
@@ -67,6 +71,7 @@ export function EmployeeForm({
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<EmployeeFormData>({
     resolver: zodResolver(employeeSchema),
@@ -86,8 +91,11 @@ export function EmployeeForm({
           position_rank_id: employee.position_rank_id ?? '',
           position_title_id: employee.position_title_id ?? '',
           employment_type: employee.employment_type,
+          job_class: employee.job_class ?? 'office',
+          pay_method: employee.pay_method ?? 'monthly',
           hire_date: employee.hire_date,
           base_salary: employee.base_salary ?? 0,
+          hourly_wage: employee.hourly_wage ?? 0,
           bank_name: employee.bank_name ?? '',
           bank_account: employee.bank_account ?? '',
           emergency_contact_name: employee.emergency_contact_name ?? '',
@@ -96,9 +104,17 @@ export function EmployeeForm({
         }
       : {
           employment_type: 'regular',
+          job_class: 'office',
+          pay_method: 'monthly',
           base_salary: 0,
+          hourly_wage: 0,
         },
   });
+
+  // 급여방식에 따라 입력 항목이 달라지므로 현재 값을 관찰합니다.
+  const jobClass = watch('job_class');
+  const payMethod = watch('pay_method');
+  const isHourlyLike = payMethod === 'hourly' || payMethod === 'daily';
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -206,14 +222,58 @@ export function EmployeeForm({
             </Select>
           </div>
           <div className="space-y-2">
+            <Label>직군</Label>
+            <Select
+              value={jobClass}
+              onValueChange={(v) => {
+                const next = v as EmployeeFormData['job_class'];
+                setValue('job_class', next);
+                // 현장직은 통상 시급제입니다. 기본값만 옮겨 주고, 담당자가
+                // 다시 고르면 그 선택이 유지됩니다.
+                setValue('pay_method', DEFAULT_PAY_METHOD[next]);
+              }}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {Object.entries(JOB_CLASS_LABEL).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>급여방식</Label>
+            <Select
+              value={payMethod}
+              onValueChange={(v) => setValue('pay_method', v as EmployeeFormData['pay_method'])}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {Object.entries(PAY_METHOD_LABEL).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="hire_date">입사일 *</Label>
             <Input id="hire_date" type="date" {...register('hire_date')} />
             {errors.hire_date && <p className="text-xs text-destructive">{errors.hire_date.message}</p>}
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="base_salary">기본급</Label>
-            <Input id="base_salary" type="number" {...register('base_salary', { valueAsNumber: true })} />
-          </div>
+          {isHourlyLike ? (
+            <div className="space-y-2">
+              <Label htmlFor="hourly_wage">{payMethod === 'daily' ? '일급' : '시급'}</Label>
+              <Input id="hourly_wage" type="number" {...register('hourly_wage', { valueAsNumber: true })} />
+              <p className="text-xs text-muted-foreground">
+                근태 실근로시간에 곱해 기본급이 산정됩니다.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor="base_salary">기본급 (월)</Label>
+              <Input id="base_salary" type="number" {...register('base_salary', { valueAsNumber: true })} />
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -282,4 +342,5 @@ export function EmployeeForm({
       </div>
     </form>
   );
+
 }

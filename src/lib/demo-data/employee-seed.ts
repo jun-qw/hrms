@@ -159,10 +159,15 @@ export const seedEmployees: Employee[] = ROSTER.map(([name, email], index) => {
     position_rank_id: 'rank-1',
     position_title_id: 'title-1',
     employment_type: 'regular',
+    // 명부에 직군 표시가 없어 전원 사무직·월급제로 두었습니다. 현장직은
+    // 인력대장에서 바꾸면 급여방식이 시급으로 따라옵니다.
+    job_class: 'office',
+    pay_method: 'monthly',
     hire_date: PLACEHOLDER_HIRE_DATE,
     resignation_date: null,
     status: 'active',
     base_salary: 0,
+    hourly_wage: 0,
     bank_name: null,
     bank_account: null,
     profile_image_url: null,

@@ -44,7 +44,7 @@ export async function resolveRateSet(year: number): Promise<ResolvedRateSet> {
       .select()
       .from(schema.payrollRateSets)
       .where(eq(schema.payrollRateSets.year, year));
-    if (exact) return { rates: exact.rates as PayrollRateSet, source: 'exact' };
+    if (exact) return { rates: withDefaults(exact.rates, year), source: 'exact' };
 
     const [previous] = await db
       .select()
@@ -54,7 +54,7 @@ export async function resolveRateSet(year: number): Promise<ResolvedRateSet> {
       .limit(1);
     if (previous) {
       return {
-        rates: { ...(previous.rates as PayrollRateSet), year },
+        rates: withDefaults(previous.rates, year),
         source: 'carried',
         fromYear: previous.year,
       };
@@ -120,4 +120,30 @@ export async function deleteRateSet(year: number): Promise<boolean> {
     console.error('deleteRateSet failed:', err);
     return false;
   }
+}
+
+/**
+ * 저장된 기준값을 기본값 위에 덮어씌웁니다.
+ *
+ * 기준값은 JSON 한 덩어리로 저장되므로, 나중에 항목이 하나 추가되면 이미
+ * 저장된 연도의 JSON에는 그 항목이 없습니다. 그대로 쓰면 계산 도중
+ * `undefined`가 섞여 금액이 NaN이 되고, 화면에는 빈칸으로 조용히 나옵니다.
+ * 급여에서 그런 실패는 눈에 띄지 않은 채 지급까지 갈 수 있으므로, 없는
+ * 항목은 항상 기본값으로 메웁니다.
+ */
+function withDefaults(stored: unknown, year: number): PayrollRateSet {
+  const s = (stored ?? {}) as Partial<PayrollRateSet>;
+  const d = DEFAULT_RATE_SET;
+  return {
+    ...d,
+    ...s,
+    year,
+    nationalPension: { ...d.nationalPension, ...s.nationalPension },
+    healthInsurance: { ...d.healthInsurance, ...s.healthInsurance },
+    longTermCare: { ...d.longTermCare, ...s.longTermCare },
+    employmentInsurance: { ...d.employmentInsurance, ...s.employmentInsurance },
+    nonTaxableLimits: { ...d.nonTaxableLimits, ...s.nonTaxableLimits },
+    incomeTax: { ...d.incomeTax, ...s.incomeTax },
+    premiums: { ...d.premiums, ...s.premiums },
+  };
 }

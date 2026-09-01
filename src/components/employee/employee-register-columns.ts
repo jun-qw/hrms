@@ -1,5 +1,5 @@
 import type { GridColumn, GridOption } from '@/components/grid/types';
-import type { Employee } from '@/types';
+import { JOB_CLASS_LABEL, PAY_METHOD_LABEL, type Employee } from '@/types';
 
 /**
  * 인력대장 열 정의와 프리셋.
@@ -23,6 +23,14 @@ export const STATUS_OPTIONS: GridOption[] = [
   { value: 'retired', label: '정년퇴직' },
 ];
 
+export const JOB_CLASS_OPTIONS: GridOption[] = Object.entries(JOB_CLASS_LABEL).map(
+  ([value, label]) => ({ value, label }),
+);
+
+export const PAY_METHOD_OPTIONS: GridOption[] = Object.entries(PAY_METHOD_LABEL).map(
+  ([value, label]) => ({ value, label }),
+);
+
 export const GENDER_OPTIONS: GridOption[] = [
   { value: 'M', label: '남' },
   { value: 'F', label: '여' },
@@ -36,7 +44,7 @@ export interface RegisterPreset {
   columns: string[];
 }
 
-const BASE = ['employee_number', 'name', 'department', 'rank', 'title', 'employment_type', 'hire_date', 'service', 'status'];
+const BASE = ['employee_number', 'name', 'department', 'job_class', 'rank', 'title', 'employment_type', 'hire_date', 'service', 'status'];
 
 export const REGISTER_PRESETS: RegisterPreset[] = [
   { id: 'basic', name: '기본', hint: '일상 조회', columns: BASE },
@@ -50,7 +58,7 @@ export const REGISTER_PRESETS: RegisterPreset[] = [
     id: 'payroll',
     name: '급여',
     hint: '급여 마스터 점검',
-    columns: ['employee_number', 'name', 'department', 'rank', 'employment_type', 'base_salary', 'bank_name', 'bank_account'],
+    columns: ['employee_number', 'name', 'department', 'job_class', 'pay_method', 'base_salary', 'hourly_wage', 'bank_name', 'bank_account'],
   },
   {
     id: 'contract',
@@ -63,6 +71,12 @@ export const REGISTER_PRESETS: RegisterPreset[] = [
     name: '입퇴사',
     hint: '이직 현황',
     columns: ['employee_number', 'name', 'department', 'hire_date', 'service', 'resignation_date', 'status'],
+  },
+  {
+    id: 'field',
+    name: '현장직',
+    hint: '시급 · 근태 연동 확인',
+    columns: ['employee_number', 'name', 'department', 'job_class', 'pay_method', 'hourly_wage', 'hire_date', 'status'],
   },
   {
     id: 'roster',
@@ -177,6 +191,25 @@ export function buildRegisterColumns(deps: ColumnDeps): GridColumn<Employee>[] {
       edit: { field: 'position_title_id', control: 'select', parse: codeParser(deps.titleOptions, '직책') },
     },
     {
+      id: 'job_class',
+      header: '직군',
+      width: 80,
+      filter: 'select',
+      options: JOB_CLASS_OPTIONS,
+      value: (e) => labelOf(JOB_CLASS_OPTIONS, e.job_class),
+      edit: { field: 'job_class', control: 'select', parse: codeParser(JOB_CLASS_OPTIONS, '직군') },
+    },
+    {
+      id: 'pay_method',
+      header: '급여방식',
+      width: 88,
+      hidden: true,
+      filter: 'select',
+      options: PAY_METHOD_OPTIONS,
+      value: (e) => labelOf(PAY_METHOD_OPTIONS, e.pay_method),
+      edit: { field: 'pay_method', control: 'select', parse: codeParser(PAY_METHOD_OPTIONS, '급여방식') },
+    },
+    {
       id: 'employment_type',
       header: '고용형태',
       width: 92,
@@ -249,7 +282,8 @@ export function buildRegisterColumns(deps: ColumnDeps): GridColumn<Employee>[] {
     { id: 'birth_date', header: '생년월일', width: 108, type: 'date', align: 'center', hidden: true, value: (e) => e.birth_date, edit: { field: 'birth_date', control: 'date', parse: date } },
 
     // ── 급여 ──
-    { id: 'base_salary', header: '기본급', width: 116, type: 'money', total: 'sum', hidden: true, value: (e) => e.base_salary, edit: { field: 'base_salary', control: 'number', parse: money } },
+    { id: 'base_salary', header: '기본급(월)', width: 116, type: 'money', total: 'sum', hidden: true, value: (e) => e.base_salary, edit: { field: 'base_salary', control: 'number', parse: money } },
+    { id: 'hourly_wage', header: '시급·일급', width: 106, type: 'money', hidden: true, value: (e) => e.hourly_wage, edit: { field: 'hourly_wage', control: 'number', parse: money } },
     { id: 'bank_name', header: '은행', width: 90, hidden: true, value: (e) => e.bank_name, edit: { field: 'bank_name', parse: text } },
     { id: 'bank_account', header: '계좌번호', width: 150, hidden: true, value: (e) => e.bank_account, edit: { field: 'bank_account', parse: text } },
 

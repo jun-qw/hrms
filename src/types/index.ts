@@ -266,6 +266,27 @@ export interface SalaryGrade {
   updated_at: string;
 }
 
+export type JobClass = 'office' | 'field';
+export type PayMethod = 'monthly' | 'annual' | 'hourly' | 'daily';
+
+export const JOB_CLASS_LABEL: Record<JobClass, string> = {
+  office: '사무직',
+  field: '현장직',
+};
+
+export const PAY_METHOD_LABEL: Record<PayMethod, string> = {
+  monthly: '월급제',
+  annual: '연봉제',
+  hourly: '시급제',
+  daily: '일급제',
+};
+
+/** 직군을 고르면 따라오는 급여방식 기본값. 현장직은 통상 시급입니다. */
+export const DEFAULT_PAY_METHOD: Record<JobClass, PayMethod> = {
+  office: 'monthly',
+  field: 'hourly',
+};
+
 export interface Employee {
   id: string;
   employee_number: string;
@@ -282,10 +303,16 @@ export interface Employee {
   position_rank_id: string | null;
   position_title_id: string | null;
   employment_type: EmploymentType;
+  /** 직군 — 고용형태·급여방식과 별개의 축입니다. */
+  job_class: JobClass;
+  /** 급여지급방식. 현장직은 통상 시급이지만 강제하지 않습니다. */
+  pay_method: PayMethod;
   hire_date: string;
   resignation_date: string | null;
   status: EmployeeStatus;
   base_salary: number;
+  /** 시급제의 시급, 일급제의 일급. 월급·연봉제에서는 0입니다. */
+  hourly_wage: number;
   bank_name: string | null;
   bank_account: string | null;
   profile_image_url: string | null;
