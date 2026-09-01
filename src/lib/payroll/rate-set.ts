@@ -69,6 +69,11 @@ export interface PayrollRateSet {
   standardDailyHours: number;
   /** 가산율 — 근로기준법상 최저치이며 사규로 올릴 수 있습니다. */
   premiums: { overtime: number; night: number; holiday: number };
+  /**
+   * 최저임금 (시간급). 시급 입력 시 미달 여부를 경고하는 데만 씁니다 —
+   * 계산을 막지는 않습니다. 수습기간 감액처럼 예외가 있기 때문입니다.
+   */
+  minimumHourlyWage: number;
 }
 
 /**
@@ -120,6 +125,8 @@ export const DEFAULT_RATE_SET: PayrollRateSet = {
   monthlyWorkHours: 209,
   standardDailyHours: 8,
   premiums: { overtime: 1.5, night: 0.5, holiday: 1.5 },
+  // 고시값 대조 전입니다. 설정에서 해당 연도 값으로 반드시 바꾸세요.
+  minimumHourlyWage: 10_320,
 };
 
 /** 다음 해 기준값을 만들 때 쓰는 복사본. 숫자는 그대로, 연도와 메모만 바꿉니다. */

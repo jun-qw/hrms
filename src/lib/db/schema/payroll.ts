@@ -9,6 +9,7 @@ import {
   timestamp,
   jsonb,
   unique,
+  index,
 } from 'drizzle-orm/pg-core';
 import { employees } from './employee';
 
@@ -141,3 +142,43 @@ export const payrollRateSets = pgTable('payroll_rate_sets', {
 });
 
 export type PayrollRateSetRow = typeof payrollRateSets.$inferSelect;
+
+// --- 급여 이력 (기본급 · 시급) ---
+
+/**
+ * 언제부터 얼마를 받았는가.
+ *
+ * `employees.base_salary` / `hourly_wage`는 **오늘 유효한 값의 사본**이고, 진짜
+ * 기록은 여기입니다. 소속 이력(`employee_assignments`)과 같은 구조를 씁니다 —
+ * 구간은 겹치지 않고, 새 구간을 열면 직전 구간이 그 전날로 닫힙니다.
+ *
+ * 이렇게 두어야 세 가지가 됩니다.
+ *  - 소급 인상: 3월분 급여를 4월에 올린 단가로 다시 계산
+ *  - 과거 급여 재산출: 그 달에 유효했던 금액으로
+ *  - 인상 이력 조회: 언제 얼마에서 얼마로
+ */
+export const employeeSalaries = pgTable(
+  'employee_salaries',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    employeeId: uuid('employee_id')
+      .notNull()
+      .references(() => employees.id, { onDelete: 'cascade' }),
+    effectiveFrom: date('effective_from').notNull(),
+    /** null이면 현재 유효한 구간입니다. */
+    effectiveTo: date('effective_to'),
+    /** 이 구간의 급여지급방식. 방식이 바뀌면 금액의 의미도 바뀝니다. */
+    payMethod: text('pay_method').notNull().default('monthly'),
+    /** 월급제·연봉제의 월 기본급 */
+    baseSalary: numeric('base_salary', { precision: 12, scale: 0 }).notNull().default('0'),
+    /** 시급제의 시급, 일급제의 일급 */
+    hourlyWage: numeric('hourly_wage', { precision: 12, scale: 0 }).notNull().default('0'),
+    /** 인상·조정 사유 — 나중에 왜 바뀌었는지 묻는 사람이 반드시 있습니다. */
+    reason: text('reason'),
+    createdBy: text('created_by'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  },
+  (t) => [index('idx_employee_salaries_asof').on(t.employeeId, t.effectiveFrom)],
+);
+
+export type EmployeeSalaryRow = typeof employeeSalaries.$inferSelect;

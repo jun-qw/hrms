@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Calculator, FileText, CheckCircle, DollarSign, TrendingUp, Users, BarChart3, Settings2, Lock, Unlock } from 'lucide-react';
+import { Calculator, FileText, CheckCircle, DollarSign, TrendingUp, Users, BarChart3, Settings2, Lock, Unlock, Coins } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import Link from 'next/link';
@@ -100,6 +100,12 @@ export default function PayrollPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">급여관리</h1>
         <div className="flex gap-2">
+          <Link href="/payroll/salaries">
+            <Button variant="outline" size="sm">
+              <Coins className="mr-1.5 h-3.5 w-3.5" />
+              급여 기준액
+            </Button>
+          </Link>
           <Link href="/payroll/settings">
             <Button variant="outline">
               <Settings2 className="h-4 w-4 mr-2" />

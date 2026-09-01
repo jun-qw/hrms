@@ -10,6 +10,7 @@ import { useAttendanceStore } from '@/lib/stores/attendance-store';
 import { calculateInsurance } from '@/lib/utils/insurance';
 import { resolveRateSet, type ResolvedRateSet } from '@/lib/actions/payroll-rate-actions';
 import { DEFAULT_RATE_SET } from '@/lib/payroll/rate-set';
+import { fetchSalariesAsOf, type SalaryRecord } from '@/lib/actions/salary-actions';
 import { calculateMonthlyIncomeTax } from '@/lib/utils/korean-tax';
 import PayrollItemSettings from '@/components/payroll/payroll-item-settings';
 import type { PayrollLineItem, SavedPayroll } from '@/types';
@@ -174,39 +175,6 @@ export default function PayrollCalculatePage() {
   /** 사번별 부양가족 수(본인 포함). 소득세 인적공제에 그대로 들어갑니다. */
   const [dependents, setDependents] = useState<Map<string, number>>(new Map());
 
-  /**
-   * 급여방식별 기본급과 통상시급.
-   *
-   * 월급·연봉제는 월 기본급을 소정근로시간으로 나눠 통상시급을 얻고, 시급제는
-   * 시급이 곧 통상시급입니다. 일급제는 1일 소정근로시간으로 환산합니다.
-   */
-  const computeBaseFor = useCallback(
-    (
-      emp: DirectoryEmployee,
-      workedHours: number,
-      workedDays: number,
-      rates: { monthlyWorkHours: number; standardDailyHours: number },
-    ): { baseSalary: number; hourlyWage: number } => {
-      switch (emp.pay_method) {
-        case 'hourly':
-          return {
-            baseSalary: Math.round(emp.hourly_wage * workedHours),
-            hourlyWage: emp.hourly_wage,
-          };
-        case 'daily':
-          return {
-            baseSalary: Math.round(emp.hourly_wage * workedDays),
-            hourlyWage: Math.round(emp.hourly_wage / rates.standardDailyHours),
-          };
-        default:
-          return {
-            baseSalary: emp.base_salary ?? 0,
-            hourlyWage: Math.round((emp.base_salary ?? 0) / rates.monthlyWorkHours),
-          };
-      }
-    },
-    [],
-  );
 
   // 해당 연도 기준값 — 4대보험 요율·비과세 한도·세율 구간이 여기서 옵니다.
   // 개편 전에는 이 값들이 코드 상수였고 설정 화면의 숫자는 계산에 닿지 않았습니다.
@@ -223,6 +191,60 @@ export default function PayrollCalculatePage() {
       alive = false;
     };
   }, [year]);
+
+  /**
+   * 그 달에 유효했던 급여.
+   *
+   * `employees.base_salary`는 오늘 값이라, 4월에 3월분을 다시 돌리면 4월에
+   * 올린 단가가 적용됩니다. 급여 이력에서 해당 월 기준으로 가져옵니다.
+   */
+  const [salaryAsOf, setSalaryAsOf] = useState<Record<string, SalaryRecord>>({});
+  useEffect(() => {
+    let alive = true;
+    const asOf = `${year}-${String(month).padStart(2, '0')}-01`;
+    fetchSalariesAsOf(asOf).then((m) => {
+      if (alive) setSalaryAsOf(m);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [year, month]);
+
+  /**
+   * 급여방식별 기본급과 통상시급.
+   *
+   * 월급·연봉제는 월 기본급을 소정근로시간으로 나눠 통상시급을 얻고, 시급제는
+   * 시급이 곧 통상시급입니다. 일급제는 1일 소정근로시간으로 환산합니다.
+   */
+  const computeBaseFor = useCallback(
+    (
+      emp: DirectoryEmployee,
+      workedHours: number,
+      workedDays: number,
+      rates: { monthlyWorkHours: number; standardDailyHours: number },
+    ): { baseSalary: number; hourlyWage: number } => {
+      // 이력에 그 달 값이 있으면 그것을, 없으면 현재 값을 씁니다.
+      const record = salaryAsOf[emp.id];
+      const monthly = record?.base_salary ?? emp.base_salary ?? 0;
+      const unit = record?.hourly_wage ?? emp.hourly_wage ?? 0;
+
+      switch (emp.pay_method) {
+        case 'hourly':
+          return { baseSalary: Math.round(unit * workedHours), hourlyWage: unit };
+        case 'daily':
+          return {
+            baseSalary: Math.round(unit * workedDays),
+            hourlyWage: Math.round(unit / rates.standardDailyHours),
+          };
+        default:
+          return {
+            baseSalary: monthly,
+            hourlyWage: Math.round(monthly / rates.monthlyWorkHours),
+          };
+      }
+    },
+    [salaryAsOf],
+  );
 
   // Step 3 state
   const [earningRows, setEarningRows] = useState<Map<string, EarningRow>>(new Map());
@@ -323,7 +345,10 @@ export default function PayrollCalculatePage() {
       // 시급직은 실근로시간이 그대로 기본급이라 지어낸 숫자가 급여로 나갑니다.
       // 비어 있으면 비어 있는 대로 보이고, 근태대장에서 채우게 해야 합니다.
       let normal = 0, late = 0, earlyLeave = 0, absent = 0, leaveD = 0;
-      let ot = 0, night = 0, holiday = 0, hours = 0;
+      let ot = 0, holiday = 0, hours = 0;
+      // 야간근로는 아직 별도 기록 원천이 없습니다. 근태대장에 야간 코드를
+      // 추가하기 전까지 0으로 두고, 필요하면 급여계산에서 직접 입력합니다.
+      const night = 0;
 
       for (const r of records) {
         if (r.status === 'normal') normal++;
