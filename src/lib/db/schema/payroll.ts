@@ -7,6 +7,7 @@ import {
   date,
   numeric,
   timestamp,
+  jsonb,
   unique,
 } from 'drizzle-orm/pg-core';
 import { employees } from './employee';
@@ -117,3 +118,26 @@ export const employeePayrollSettings = pgTable('employee_payroll_settings', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });
+
+// --- 연도별 급여 기준값 (요율 · 비과세 한도 · 세율 구간) ---
+
+/**
+ * 해마다 바뀌는 숫자를 한 덩어리로 모아 연도로 조회합니다.
+ *
+ * 개편 전에는 4대보험 요율이 코드 상수였고 설정 화면의 값은 표시만 되었습니다.
+ * 담당자가 요율을 고쳐도 계산은 옛 숫자로 돌아가는 상태였기 때문에, 기준값을
+ * 데이터로 빼고 계산 엔진이 이 값을 읽도록 바꿨습니다.
+ *
+ * `rates`는 `PayrollRateSet` 모양의 JSON입니다. 구조를 컬럼으로 펼치지 않은
+ * 이유는 세율 구간처럼 개수가 해마다 달라질 수 있는 항목이 섞여 있어서입니다.
+ */
+export const payrollRateSets = pgTable('payroll_rate_sets', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  year: integer('year').notNull().unique(),
+  rates: jsonb('rates').notNull(),
+  /** 이 값들을 어느 고시로 확인했는지 — 다음 담당자를 위한 근거 */
+  note: text('note'),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export type PayrollRateSetRow = typeof payrollRateSets.$inferSelect;

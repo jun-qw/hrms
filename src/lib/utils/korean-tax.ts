@@ -1,75 +1,32 @@
 /**
- * 간이세액표 기반 근사 소득세 계산
- * 실제 운영 시에는 국세청 간이세액표 데이터를 사용해야 합니다.
+ * 근로소득 원천징수 세액 (근사).
+ *
+ * 계산은 `@/lib/payroll/engine`의 `computeIncomeTax`가 하고, 여기서는 연도별
+ * 기준값을 받아 넘기는 껍데기만 둡니다.
+ *
+ * 국세청 간이세액표를 그대로 옮긴 것이 아니라 연 환산 후 근로소득공제·인적공제를
+ * 빼고 세율을 적용하는 **근사 계산**입니다. 실제 원천징수액과 차이가 날 수 있고
+ * 연말정산에서 정산됩니다. 정확한 표가 필요해지면 엔진의 해당 함수만 교체하면
+ * 나머지 계산은 손대지 않아도 됩니다.
  */
+import { computeIncomeTax } from '@/lib/payroll/engine';
+import { DEFAULT_RATE_SET, type PayrollRateSet } from '@/lib/payroll/rate-set';
 
-interface TaxBracket {
-  min: number;
-  max: number;
-  rate: number;
-  deduction: number;
-}
-
-const TAX_BRACKETS: TaxBracket[] = [
-  { min: 0, max: 14000000, rate: 0.06, deduction: 0 },
-  { min: 14000000, max: 50000000, rate: 0.15, deduction: 1260000 },
-  { min: 50000000, max: 88000000, rate: 0.24, deduction: 5760000 },
-  { min: 88000000, max: 150000000, rate: 0.35, deduction: 15440000 },
-  { min: 150000000, max: 300000000, rate: 0.38, deduction: 19940000 },
-  { min: 300000000, max: 500000000, rate: 0.40, deduction: 25940000 },
-  { min: 500000000, max: 1000000000, rate: 0.42, deduction: 35940000 },
-  { min: 1000000000, max: Infinity, rate: 0.45, deduction: 65940000 },
-];
-
-/**
- * 연간 과세표준 기반 소득세 계산 (근사)
- */
-export function calculateIncomeTax(annualTaxableIncome: number): number {
-  const bracket = TAX_BRACKETS.find(
-    (b) => annualTaxableIncome > b.min && annualTaxableIncome <= b.max
-  ) || TAX_BRACKETS[TAX_BRACKETS.length - 1];
-
-  return Math.round(annualTaxableIncome * bracket.rate - bracket.deduction);
-}
-
-/**
- * 월 소득세 (간이) 계산
- * @param monthlyTaxableIncome 월 과세 소득
- * @param dependents 부양가족 수 (본인 포함)
- */
 export function calculateMonthlyIncomeTax(
   monthlyTaxableIncome: number,
-  dependents: number = 1
-): { incomeTax: number; localTax: number } {
-  // 연 환산
-  const annualIncome = monthlyTaxableIncome * 12;
+  dependents: number = 1,
+  rates: PayrollRateSet = DEFAULT_RATE_SET,
+): { incomeTax: number; localTax: number; formula: string } {
+  return computeIncomeTax(monthlyTaxableIncome, dependents, rates);
+}
 
-  // 근로소득공제 (간략화)
-  let deduction = 0;
-  if (annualIncome <= 5000000) {
-    deduction = annualIncome * 0.7;
-  } else if (annualIncome <= 15000000) {
-    deduction = 3500000 + (annualIncome - 5000000) * 0.4;
-  } else if (annualIncome <= 45000000) {
-    deduction = 7500000 + (annualIncome - 15000000) * 0.15;
-  } else if (annualIncome <= 100000000) {
-    deduction = 12000000 + (annualIncome - 45000000) * 0.05;
-  } else {
-    deduction = 14750000 + (annualIncome - 100000000) * 0.02;
-  }
-
-  // 인적공제 (1인당 150만원)
-  const personalDeduction = dependents * 1500000;
-
-  const taxableIncome = Math.max(annualIncome - deduction - personalDeduction, 0);
-  const annualTax = calculateIncomeTax(taxableIncome);
-  const monthlyTax = Math.round(annualTax / 12);
-
-  // 지방소득세 = 소득세의 10%
-  const localTax = Math.round(monthlyTax * 0.1);
-
-  return {
-    incomeTax: monthlyTax,
-    localTax,
-  };
+/** 연 과세표준에 대한 산출세액. 퇴직소득·연말정산 화면에서 씁니다. */
+export function calculateIncomeTax(
+  annualTaxBase: number,
+  rates: PayrollRateSet = DEFAULT_RATE_SET,
+): number {
+  const bracket =
+    rates.incomeTax.brackets.find((b) => b.upTo === null || annualTaxBase <= b.upTo) ??
+    rates.incomeTax.brackets[rates.incomeTax.brackets.length - 1];
+  return Math.max(0, Math.round(annualTaxBase * bracket.rate - bracket.progressive));
 }

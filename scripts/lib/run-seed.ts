@@ -19,6 +19,7 @@ import {
 import { seedWorkflowTemplates } from '../../src/lib/demo-data/workflow-seed';
 import { defaultPayrollItems } from '../../src/lib/demo-data/payroll-seed';
 import { seedCodeGroups, seedCodeItems } from '../../src/lib/demo-data/code-seed';
+import { DEFAULT_RATE_SET } from '../../src/lib/payroll/rate-set';
 
 export async function runSeed() {
   const { db, close } = createDb();
@@ -230,6 +231,19 @@ export async function runSeed() {
       })),
     );
     console.log(`Created ${seedWorkflowTemplates.length} workflow templates`);
+  }
+
+  // --- 연도별 급여 기준값 ---
+  // 요율·비과세 한도·세율 구간을 데이터로 넣습니다. 값 자체는 확정 고시값이
+  // 아니므로, 운영 투입 전에 설정 화면에서 대조해야 합니다.
+  const rateSetCount = await db.select().from(schema.payrollRateSets);
+  if (rateSetCount.length === 0) {
+    await db.insert(schema.payrollRateSets).values({
+      year: DEFAULT_RATE_SET.year,
+      rates: DEFAULT_RATE_SET,
+      note: DEFAULT_RATE_SET.note,
+    });
+    console.log(`Created payroll rate set for ${DEFAULT_RATE_SET.year}`);
   }
 
   // --- Default settings sections (rates are tenant-adjustable) ---

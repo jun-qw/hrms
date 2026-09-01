@@ -1,13 +1,10 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useEmployeeDirectory } from '@/lib/hooks/use-employee-directory';
 import { Breadcrumb } from '@/components/layout/breadcrumb';
+import { PayrollRegister } from '@/components/payroll/payroll-register';
 import { usePayrollStore } from '@/lib/stores/payroll-store';
-import { useCodeMap, CODE } from '@/lib/hooks/use-code';
-import type { PayrollStatus } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,27 +14,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Calculator, FileText, CheckCircle, Trash2, DollarSign, TrendingUp, Users, BarChart3, Settings2, Lock, Unlock, FileUp } from 'lucide-react';
+import { Calculator, FileText, CheckCircle, DollarSign, TrendingUp, Users, BarChart3, Settings2, Lock, Unlock } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
 const fmtWon = (n: number) => new Intl.NumberFormat('ko-KR').format(n) + '원';
 
-const statusVariant = (s: string): 'default' | 'secondary' | 'outline' => {
-  switch (s) {
-    case 'paid': return 'default';
-    case 'confirmed': return 'secondary';
-    default: return 'outline';
-  }
-};
-
 export default function PayrollPage() {
-  const directory = useEmployeeDirectory();
-  const PAYROLL_STATUS = useCodeMap(CODE.PAYROLL_STATUS);
   const savedPayrolls = usePayrollStore((s) => s.savedPayrolls);
   const updatePayrollStatus = usePayrollStore((s) => s.updatePayrollStatus);
-  const deletePayroll = usePayrollStore((s) => s.deletePayroll);
 
   const [filterYear, setFilterYear] = useState('2026');
   const [filterMonth, setFilterMonth] = useState('all');
@@ -107,18 +93,6 @@ export default function PayrollPage() {
   const totalEarnings = filtered.reduce((s, p) => s + p.total_earnings, 0);
   const totalDeductions = filtered.reduce((s, p) => s + p.total_deductions, 0);
   const totalNetPay = filtered.reduce((s, p) => s + p.net_pay, 0);
-
-  const handleStatusChange = (id: string, status: PayrollStatus) => {
-    updatePayrollStatus(id, status);
-    toast.success(`급여 상태가 "${PAYROLL_STATUS[status]}"(으)로 변경되었습니다.`);
-  };
-
-  const handleDelete = (id: string) => {
-    if (window.confirm('이 급여 기록을 삭제하시겠습니까?')) {
-      deletePayroll(id);
-      toast.success('급여 기록이 삭제되었습니다.');
-    }
-  };
 
   return (
     <div>
@@ -267,113 +241,7 @@ export default function PayrollPage() {
       )}
 
       {/* Payroll Table */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">급여 대장</CardTitle>
-          {filtered.length > 0 && (
-            <Button variant="outline" size="sm" onClick={() => {
-              const headers = ['이름', '부서', '기간', '기본급', '총지급액', '총공제액', '실수령액', '상태'];
-              const rows = filtered.map((p) => {
-                const emp = directory.find((e) => e.id === p.employee_id);
-                return [
-                  emp?.name ?? p.employee_id,
-                  emp?.department ?? '',
-                  `${p.year}년 ${p.month}월`,
-                  p.base_salary,
-                  p.total_earnings,
-                  p.total_deductions,
-                  p.net_pay,
-                  PAYROLL_STATUS[p.status] ?? p.status,
-                ].join(',');
-              });
-              const csv = '\uFEFF' + [headers.join(','), ...rows].join('\n');
-              const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = `급여대장_${filterYear}년${filterMonth !== 'all' ? `_${filterMonth}월` : ''}.csv`;
-              a.click();
-              URL.revokeObjectURL(url);
-              toast.success('급여대장이 다운로드되었습니다.');
-            }}>
-              <FileUp className="h-3.5 w-3.5 mr-1.5" />
-              엑셀 다운로드
-            </Button>
-          )}
-        </CardHeader>
-        <CardContent>
-          <div className="border rounded-lg">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>이름</TableHead>
-                  <TableHead>부서</TableHead>
-                  <TableHead>기간</TableHead>
-                  <TableHead className="text-right">기본급</TableHead>
-                  <TableHead className="text-right">총 지급액</TableHead>
-                  <TableHead className="text-right">총 공제액</TableHead>
-                  <TableHead className="text-right">실수령액</TableHead>
-                  <TableHead>상태</TableHead>
-                  <TableHead></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={9} className="text-center text-muted-foreground">
-                      해당 기간의 급여 기록이 없습니다.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filtered.map((p) => {
-                    const emp = directory.find((e) => e.id === p.employee_id);
-                    return (
-                      <TableRow key={p.id}>
-                        <TableCell className="font-medium">{emp?.name ?? p.employee_id}</TableCell>
-                        <TableCell>{emp?.department ?? ''}</TableCell>
-                        <TableCell className="text-sm">{p.year}년 {p.month}월</TableCell>
-                        <TableCell className="text-right font-mono text-sm">{fmtWon(p.base_salary)}</TableCell>
-                        <TableCell className="text-right font-mono text-sm">{fmtWon(p.total_earnings)}</TableCell>
-                        <TableCell className="text-right font-mono text-sm text-destructive">{fmtWon(p.total_deductions)}</TableCell>
-                        <TableCell className="text-right font-mono text-sm font-bold">{fmtWon(p.net_pay)}</TableCell>
-                        <TableCell>
-                          <Badge variant={statusVariant(p.status)} className="text-xs">
-                            {PAYROLL_STATUS[p.status] ?? p.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Link href={`/payroll/payslip/${p.id}`}>
-                              <Button variant="ghost" size="sm" className="h-7 px-2">
-                                <FileText className="h-3 w-3" />
-                              </Button>
-                            </Link>
-                            {p.status === 'draft' && (
-                              <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => handleStatusChange(p.id, 'confirmed')}>
-                                <CheckCircle className="h-3 w-3" />
-                              </Button>
-                            )}
-                            {p.status === 'confirmed' && (
-                              <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => handleStatusChange(p.id, 'paid')}>
-                                <CheckCircle className="h-3 w-3 text-green-600" />
-                              </Button>
-                            )}
-                            {p.status === 'draft' && (
-                              <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => handleDelete(p.id)}>
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+      <PayrollRegister year={Number(filterYear)} month={filterMonth === 'all' ? 'all' : Number(filterMonth)} />
     </div>
   );
 }

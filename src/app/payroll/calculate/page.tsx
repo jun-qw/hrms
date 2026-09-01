@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useEmployeeDirectory, type DirectoryEmployee } from '@/lib/hooks/use-employee-directory';
 import { Breadcrumb } from '@/components/layout/breadcrumb';
 import { usePayrollStore, MONTHLY_WORK_HOURS } from '@/lib/stores/payroll-store';
 import { useAttendanceStore } from '@/lib/stores/attendance-store';
 import { calculateInsurance } from '@/lib/utils/insurance';
+import { resolveRateSet, type ResolvedRateSet } from '@/lib/actions/payroll-rate-actions';
+import { DEFAULT_RATE_SET } from '@/lib/payroll/rate-set';
 import { calculateMonthlyIncomeTax } from '@/lib/utils/korean-tax';
 import PayrollItemSettings from '@/components/payroll/payroll-item-settings';
 import type { PayrollLineItem, SavedPayroll } from '@/types';
@@ -71,6 +73,10 @@ import {
 import { toast } from 'sonner';
 
 const fmtWon = (n: number) => new Intl.NumberFormat('ko-KR').format(Math.round(n)) + '원';
+/** 0.03545 → '3.545%'. 기준값이 바뀌면 화면 설명도 같이 바뀝니다. */
+const pctText = (rate: number) =>
+  `${Number((rate * 100).toFixed(4))}%`;
+
 const fmtNum = (n: number) => new Intl.NumberFormat('ko-KR').format(Math.round(n));
 
 // ---- Types ----
@@ -188,6 +194,24 @@ export default function PayrollCalculatePage() {
 
   // Step 2 state
   const [attendanceData, setAttendanceData] = useState<Map<string, AttendanceSummary>>(new Map());
+  /** 사번별 부양가족 수(본인 포함). 소득세 인적공제에 그대로 들어갑니다. */
+  const [dependents, setDependents] = useState<Map<string, number>>(new Map());
+
+  // 해당 연도 기준값 — 4대보험 요율·비과세 한도·세율 구간이 여기서 옵니다.
+  // 개편 전에는 이 값들이 코드 상수였고 설정 화면의 숫자는 계산에 닿지 않았습니다.
+  const [rateSet, setRateSet] = useState<ResolvedRateSet>({
+    rates: DEFAULT_RATE_SET,
+    source: 'default',
+  });
+  useEffect(() => {
+    let alive = true;
+    resolveRateSet(Number(year)).then((r) => {
+      if (alive) setRateSet(r);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [year]);
 
   // Step 3 state
   const [earningRows, setEarningRows] = useState<Map<string, EarningRow>>(new Map());
@@ -321,7 +345,7 @@ export default function PayrollCalculatePage() {
     const map = new Map<string, EarningRow>();
     for (const emp of selectedEmployees) {
       const baseSalary = emp.base_salary ?? 0;
-      const hourlyWage = Math.round(baseSalary / MONTHLY_WORK_HOURS);
+      const hourlyWage = Math.round(baseSalary / rateSet.rates.monthlyWorkHours);
       const att = attendanceData.get(emp.id);
 
       const empSettings = employeePayrollSettings.filter(
@@ -334,11 +358,12 @@ export default function PayrollCalculatePage() {
       const nightHours = att?.nightHours ?? 0;
       const holidayHours = att?.holidayHours ?? 0;
 
-      const overtimePay = Math.round(hourlyWage * 1.5 * overtimeHours);
-      const nightPay = Math.round(hourlyWage * 0.5 * nightHours);
-      const holidayPay = Math.round(hourlyWage * 1.5 * holidayHours);
-      const meal = 200000;
-      const transport = 200000;
+      const { premiums, nonTaxableLimits } = rateSet.rates;
+      const overtimePay = Math.round(hourlyWage * premiums.overtime * overtimeHours);
+      const nightPay = Math.round(hourlyWage * premiums.night * nightHours);
+      const holidayPay = Math.round(hourlyWage * premiums.holiday * holidayHours);
+      const meal = nonTaxableLimits.meal;
+      const transport = nonTaxableLimits.transport;
 
       const total = baseSalary + meal + transport + positionAllowance + overtimePay + nightPay + holidayPay;
       map.set(emp.id, {
@@ -356,7 +381,7 @@ export default function PayrollCalculatePage() {
       });
     }
     setEarningRows(map);
-  }, [selectedEmployees, attendanceData, employeePayrollSettings]);
+  }, [selectedEmployees, attendanceData, employeePayrollSettings, rateSet]);
 
   // ---- Step 4: Build deduction rows ----
 
@@ -367,8 +392,8 @@ export default function PayrollCalculatePage() {
       if (!er) continue;
       const taxableIncome =
         er.baseSalary + er.positionAllowance + er.overtimePay + er.nightPay + er.holidayPay + er.otherPay;
-      const insurance = calculateInsurance(taxableIncome);
-      const tax = calculateMonthlyIncomeTax(taxableIncome, 1);
+      const insurance = calculateInsurance(taxableIncome, rateSet.rates);
+      const tax = calculateMonthlyIncomeTax(taxableIncome, dependents.get(emp.id) ?? 1, rateSet.rates);
       map.set(emp.id, {
         employeeId: emp.id,
         taxableIncome,
@@ -389,7 +414,7 @@ export default function PayrollCalculatePage() {
       });
     }
     setDeductionRows(map);
-  }, [selectedEmployees, earningRows]);
+  }, [selectedEmployees, earningRows, dependents, rateSet]);
 
   // ---- Step 5: Calculate results ----
 
@@ -478,10 +503,10 @@ export default function PayrollCalculatePage() {
         items.push({ item_id: 'pi-other', name: '기타수당', category: 'earning', amount: row.earnings.otherPay, is_taxable: true, formula: `${fmtWon(row.earnings.otherPay)}` });
       }
       items.push(
-        { item_id: 'pi-pension', name: '국민연금', category: 'deduction', amount: row.deductions.nationalPension, is_taxable: false, formula: `과세소득 x 4.5%` },
-        { item_id: 'pi-health', name: '건강보험', category: 'deduction', amount: row.deductions.healthInsurance, is_taxable: false, formula: `과세소득 x 3.545%` },
-        { item_id: 'pi-longterm', name: '장기요양보험', category: 'deduction', amount: row.deductions.longTermCare, is_taxable: false, formula: `건강보험 x 12.95%` },
-        { item_id: 'pi-employment', name: '고용보험', category: 'deduction', amount: row.deductions.employmentInsurance, is_taxable: false, formula: `과세소득 x 0.9%` },
+        { item_id: 'pi-pension', name: '국민연금', category: 'deduction', amount: row.deductions.nationalPension, is_taxable: false, formula: `과세소득 × ${pctText(rateSet.rates.nationalPension.rate)}` },
+        { item_id: 'pi-health', name: '건강보험', category: 'deduction', amount: row.deductions.healthInsurance, is_taxable: false, formula: `과세소득 × ${pctText(rateSet.rates.healthInsurance.rate)}` },
+        { item_id: 'pi-longterm', name: '장기요양보험', category: 'deduction', amount: row.deductions.longTermCare, is_taxable: false, formula: `건강보험 × ${pctText(rateSet.rates.longTermCare.rate)}` },
+        { item_id: 'pi-employment', name: '고용보험', category: 'deduction', amount: row.deductions.employmentInsurance, is_taxable: false, formula: `과세소득 × ${pctText(rateSet.rates.employmentInsurance.rate)}` },
         { item_id: 'pi-incometax', name: '소득세', category: 'deduction', amount: row.deductions.incomeTax, is_taxable: false, formula: `간이세액표 기반` },
         { item_id: 'pi-localtax', name: '지방소득세', category: 'deduction', amount: row.deductions.localTax, is_taxable: false, formula: `소득세 x 10%` }
       );
@@ -498,14 +523,14 @@ export default function PayrollCalculatePage() {
         total_earnings: row.totalEarnings,
         total_deductions: row.totalDeductions,
         net_pay: row.netPay,
-        dependents: 1,
+        dependents: dependents.get(row.employeeId) ?? 1,
         status: 'draft',
         created_at: new Date().toISOString().slice(0, 10),
       };
       savePayroll(payroll);
     }
     toast.success(`${results.length}건의 급여가 저장되었습니다.`);
-  }, [results, year, month, savePayroll]);
+  }, [results, year, month, savePayroll, dependents, rateSet]);
 
   // ---- Excel download ----
 
@@ -1225,6 +1250,7 @@ export default function PayrollCalculatePage() {
                         <TableHead className="sticky left-0 bg-background z-10">이름</TableHead>
                         <TableHead>부서</TableHead>
                         <TableHead className="text-right">과세소득</TableHead>
+                        <TableHead className="text-center">부양가족</TableHead>
                         <TableHead className="text-right">국민연금</TableHead>
                         <TableHead className="text-right">건강보험</TableHead>
                         <TableHead className="text-right">장기요양</TableHead>
@@ -1244,13 +1270,25 @@ export default function PayrollCalculatePage() {
                             <TableCell className="sticky left-0 bg-background z-10 font-medium">{emp.name}</TableCell>
                             <TableCell className="text-sm">{emp.department}</TableCell>
                             <TableCell className="text-right font-mono text-sm">{fmtNum(row.taxableIncome)}</TableCell>
+                            <TableCell className="text-center">
+                              <Input
+                                type="number"
+                                min={1}
+                                className="mx-auto h-8 w-16 text-center text-sm"
+                                value={dependents.get(emp.id) ?? 1}
+                                onChange={(e) => {
+                                  const n = Math.max(1, Number(e.target.value) || 1);
+                                  setDependents((prev) => new Map(prev).set(emp.id, n));
+                                }}
+                              />
+                            </TableCell>
                             <TableCell className="text-right">
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <span className="font-mono text-sm cursor-help">{fmtNum(row.nationalPension)}</span>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>min(max({fmtNum(row.taxableIncome)}, 370,000), 5,900,000) x 4.5%</p>
+                                  <p>min(max({fmtNum(row.taxableIncome)}, {fmtNum(rateSet.rates.nationalPension.minBase)}), {fmtNum(rateSet.rates.nationalPension.maxBase)}) × {(rateSet.rates.nationalPension.rate * 100).toFixed(3).replace(/.?0+$/, '')}%</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TableCell>
@@ -1260,7 +1298,7 @@ export default function PayrollCalculatePage() {
                                   <span className="font-mono text-sm cursor-help">{fmtNum(row.healthInsurance)}</span>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>{fmtNum(row.taxableIncome)} x 3.545%</p>
+                                  <p>{fmtNum(row.taxableIncome)} × {(rateSet.rates.healthInsurance.rate * 100).toFixed(3).replace(/.?0+$/, '')}%</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TableCell>
@@ -1270,7 +1308,7 @@ export default function PayrollCalculatePage() {
                                   <span className="font-mono text-sm cursor-help">{fmtNum(row.longTermCare)}</span>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>{fmtNum(row.healthInsurance)}(건강보험) x 12.95%</p>
+                                  <p>{fmtNum(row.healthInsurance)}(건강보험) × {pctText(rateSet.rates.longTermCare.rate)}</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TableCell>
@@ -1280,7 +1318,7 @@ export default function PayrollCalculatePage() {
                                   <span className="font-mono text-sm cursor-help">{fmtNum(row.employmentInsurance)}</span>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>{fmtNum(row.taxableIncome)} x 0.9%</p>
+                                  <p>{fmtNum(row.taxableIncome)} × {(rateSet.rates.employmentInsurance.rate * 100).toFixed(3).replace(/.?0+$/, '')}%</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TableCell>
@@ -1463,10 +1501,10 @@ export default function PayrollCalculatePage() {
                                     )}
                                     <Separator className="my-2" />
                                     <div className="font-semibold">총 지급액: {fmtWon(row.totalEarnings)}</div>
-                                    <div className="mt-2">- 국민연금: {fmtWon(dr.nationalPension)} (min(max({fmtNum(dr.taxableIncome)}, 370,000), 5,900,000) x 4.5%)</div>
-                                    <div>- 건강보험: {fmtWon(dr.healthInsurance)} ({fmtNum(dr.taxableIncome)} x 3.545%)</div>
-                                    <div>- 장기요양: {fmtWon(dr.longTermCare)} ({fmtNum(dr.healthInsurance)} x 12.95%)</div>
-                                    <div>- 고용보험: {fmtWon(dr.employmentInsurance)} ({fmtNum(dr.taxableIncome)} x 0.9%)</div>
+                                    <div className="mt-2">- 국민연금: {fmtWon(dr.nationalPension)} (min(max({fmtNum(dr.taxableIncome)}, {fmtNum(rateSet.rates.nationalPension.minBase)}), {fmtNum(rateSet.rates.nationalPension.maxBase)}) × {pctText(rateSet.rates.nationalPension.rate)})</div>
+                                    <div>- 건강보험: {fmtWon(dr.healthInsurance)} ({fmtNum(dr.taxableIncome)} × {pctText(rateSet.rates.healthInsurance.rate)})</div>
+                                    <div>- 장기요양: {fmtWon(dr.longTermCare)} ({fmtNum(dr.healthInsurance)} × {pctText(rateSet.rates.longTermCare.rate)})</div>
+                                    <div>- 고용보험: {fmtWon(dr.employmentInsurance)} ({fmtNum(dr.taxableIncome)} × {pctText(rateSet.rates.employmentInsurance.rate)})</div>
                                     <div>- 소득세: {fmtWon(dr.incomeTax)} (간이세액표 기반)</div>
                                     <div>- 지방소득세: {fmtWon(dr.localTax)} ({fmtNum(dr.incomeTax)} x 10%)</div>
                                     {dr.otherDeduction > 0 && (
