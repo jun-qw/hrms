@@ -58,6 +58,7 @@ import {
   fetchAssignments,
   syncCurrentAssignments,
 } from './assignment-actions';
+import { startEmployeeProcess } from './pipeline-actions';
 
 // ---------------------------------------------------------------------------
 // Read: full module dataset
@@ -159,6 +160,9 @@ export async function createEmployee(employee: Employee): Promise<Employee | nul
         workplaceId: row.workplaceId,
         reason: '입사',
       });
+      // 입사 프로세스를 함께 엽니다. 담당자가 따로 기억해서 시작하게 두면
+      // 계약서·계정·연차 부여 같은 항목이 그대로 누락됩니다.
+      await startEmployeeProcess(row.id, 'onboarding');
     }
     return toApp<Employee>(row);
   } catch (err) {

@@ -15,6 +15,7 @@ import {
   Building2,
   FileSpreadsheet,
   ScrollText,
+  ListChecks,
 } from 'lucide-react';
 import { useEmployeeStore } from '@/lib/stores/employee-store';
 
@@ -46,6 +47,12 @@ export default function EmployeesPage() {
             <Button variant="outline">
               <FileSpreadsheet className="mr-2 h-4 w-4" />
               데이터 가져오기
+            </Button>
+          </Link>
+          <Link href="/employees/pipeline">
+            <Button variant="outline">
+              <ListChecks className="mr-2 h-4 w-4" />
+              입퇴사 진행
             </Button>
           </Link>
           <Link href="/employees/roster">

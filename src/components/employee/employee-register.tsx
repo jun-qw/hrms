@@ -12,6 +12,7 @@ import { updateEmployee as persistEmployee } from '@/lib/actions/employee-action
 import type { Employee } from '@/types';
 import { REGISTER_PRESETS, buildRegisterColumns } from './employee-register-columns';
 import { DepartmentTreeFilter, departmentSubtree } from './department-tree-filter';
+import { BulkResignDialog } from './bulk-resign-dialog';
 
 type StatusTab = 'active' | 'on_leave' | 'left' | 'all';
 
@@ -41,6 +42,7 @@ export function EmployeeRegister() {
   const [preset, setPreset] = useState<string>('basic');
   const [groupByDept, setGroupByDept] = useState(false);
   const [departmentId, setDepartmentId] = useState<string | null>(null);
+  const [resigning, setResigning] = useState<Employee[]>([]);
 
   // ── lookups ──────────────────────────────────────────────────────────────
 
@@ -253,6 +255,16 @@ export function EmployeeRegister() {
               >
                 복사
               </Button>
+              {selected.every((e) => e.status !== 'resigned' && e.status !== 'retired') && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 border-destructive/40 text-xs text-destructive hover:bg-destructive/5"
+                  onClick={() => setResigning(selected)}
+                >
+                  퇴사 처리
+                </Button>
+              )}
               <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={clear}>
                 선택 해제
               </Button>
@@ -262,6 +274,13 @@ export function EmployeeRegister() {
       />
         </div>
       </div>
+
+      <BulkResignDialog
+        open={resigning.length > 0}
+        onOpenChange={(next) => !next && setResigning([])}
+        employees={resigning}
+        onDone={() => setResigning([])}
+      />
     </div>
   );
 }

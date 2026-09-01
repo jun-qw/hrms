@@ -11,6 +11,7 @@ import { StatsCard } from '@/components/dashboard/stats-card';
 import { HeadcountChart } from '@/components/dashboard/headcount-chart';
 import { HireResignChart } from '@/components/dashboard/hire-resign-chart';
 import { RecentEvents } from '@/components/dashboard/recent-events';
+import { TodoPanel } from '@/components/dashboard/todo-panel';
 import { Breadcrumb } from '@/components/layout/breadcrumb';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -307,6 +308,10 @@ export default function DashboardPage() {
     <div>
       <Breadcrumb />
       <h1 className="text-2xl font-bold mb-6">대시보드</h1>
+
+      <div className="mb-6">
+        <TodoPanel />
+      </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         {statsData.map((stat) => (
