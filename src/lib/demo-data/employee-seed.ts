@@ -1,17 +1,29 @@
 /**
- * 대한오토텍(주) 초기 인력 명부.
+ * 대한오토텍(주) 인력 명부.
  *
- * 사내 메일 명부에서 확보한 것은 **성명과 회사 이메일뿐**입니다. 부서·직급·직책·
- * 입사일·급여 등 나머지 항목은 확인된 값이 없으므로 아래 원칙으로 적재합니다.
+ * 출처: 사내 `비상연락망 2026.09.01` 워크북의 `비상연락망 상세` 시트.
+ * 시트는 같은 서식의 블록 5개가 가로로 이어 붙은 형태라, 이를 한 줄씩 펼쳐
+ * 정규화했습니다. 총 115명.
  *
- *  - 전원을 `미배정` 부서에 넣고, 직급·직책도 최하위 기본값으로 둡니다.
- *    실제 소속은 도입 후 **인력대장 그리드에서 일괄 수정**하는 것을 전제로 합니다.
- *  - 사번은 명부 순서를 따른 임시 일련번호(`0001`~)이며, 회사 채번 규칙이
- *    정해지면 그리드에서 교체합니다.
- *  - 입사일은 스키마상 NOT NULL이라 `PLACEHOLDER_HIRE_DATE` 한 값으로 채웁니다.
- *    **연차 자동계산이 이 날짜를 그대로 쓰므로 실제 입사일로 반드시 교체해야 합니다.**
+ * ## 사번 규칙
  *
- * 추측으로 채운 값은 하나도 없습니다. 비어 있는 항목은 비어 있는 채로 둡니다.
+ * `DA` + `YYMMDD`(입사일) + `NNN`(같은 입사일 안에서의 순번).
+ * 순번은 명부에 적힌 순서를 따릅니다. 같은 날 입사자가 여러 명인 날이
+ * 있으므로
+ * 채번 근거를 바꾸려면 이 파일의 순서를 바꾸면 됩니다.
+ *
+ * ## 확인이 필요한 항목
+ *
+ *  - **이메일**: 메일 명부에서 확인된 52명만 채웠습니다.
+ *    나머지는 비워 둡니다 — 현장 근로자는 회사 계정이 없는 경우가 많아
+ *    가짜 주소를 만들어 넣지 않았습니다.
+ *  - **부서**: 명부 비고에서 확인된 39명만 배정했습니다.
+ *    생산 블록의 비고는 대부분 체류자격(E-7, E-9 …)이라 부서로 쓰지 않았습니다.
+ *  - **직급·직책**: 명부의 '직위' 칸에서 직급으로 읽히는 값만 옮겼습니다.
+ *    '생', '검', '청소'처럼 담당을 나타내는 표기는 직급이 아니므로 사원/팀원으로
+ *    두고 원래 표기를 비고에 남겼습니다.
+ *  - **급여액**: 명부에 없어 전부 0입니다. 현장 시급직은 시급을, 나머지는 월
+ *    기본급을 인력대장에서 입력해야 급여 계산이 됩니다.
  */
 import type {
   Department,
@@ -26,168 +38,242 @@ import type {
   SalaryGrade,
 } from '@/types';
 
-/** 실제 입사일을 확인하기 전까지 쓰는 자리표시 값. */
-export const PLACEHOLDER_HIRE_DATE = '2026-01-01';
-
-// ---------------------------------------------------------------------------
-// 조직 — 확인 전까지 전원이 머무는 `미배정` + 일반적인 시작 부서 골격
-// ---------------------------------------------------------------------------
-
 const ORG_DATE = '2026-01-01';
+
+/** 입사일이 확인되지 않은 사람에게 쓰는 자리표시 값. */
+export const PLACEHOLDER_HIRE_DATE = '2026-01-01';
 
 export const seedDepartments: Department[] = [
   { id: 'dept-00', name: '미배정', code: 'UNASSIGNED', parent_id: null, level: 1, sort_order: 0, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
   { id: 'dept-01', name: '경영지원팀', code: 'MGT', parent_id: null, level: 1, sort_order: 1, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
-  { id: 'dept-02', name: '영업팀', code: 'SALES', parent_id: null, level: 1, sort_order: 2, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
-  { id: 'dept-03', name: '기술연구팀', code: 'RND', parent_id: null, level: 1, sort_order: 3, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
-  { id: 'dept-04', name: '생산팀', code: 'PROD', parent_id: null, level: 1, sort_order: 4, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
-  { id: 'dept-05', name: '품질관리팀', code: 'QC', parent_id: null, level: 1, sort_order: 5, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
+  { id: 'dept-02', name: '경영기획팀', code: 'PLAN', parent_id: null, level: 1, sort_order: 2, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
+  { id: 'dept-03', name: '총무팀', code: 'GA', parent_id: null, level: 1, sort_order: 3, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
+  { id: 'dept-04', name: '전산팀', code: 'IT', parent_id: null, level: 1, sort_order: 4, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
+  { id: 'dept-05', name: '기술연구소', code: 'RND', parent_id: null, level: 1, sort_order: 5, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
+  { id: 'dept-06', name: '생산기술팀', code: 'PE', parent_id: null, level: 1, sort_order: 6, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
+  { id: 'dept-07', name: '생산관리팀', code: 'PC', parent_id: null, level: 1, sort_order: 7, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
+  { id: 'dept-08', name: '주조팀', code: 'CAST', parent_id: null, level: 1, sort_order: 8, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
+  { id: 'dept-09', name: '금형팀', code: 'MOLD', parent_id: null, level: 1, sort_order: 9, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
+  { id: 'dept-10', name: '사상팀', code: 'FIN', parent_id: null, level: 1, sort_order: 10, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
+  { id: 'dept-11', name: '보전팀', code: 'MAINT', parent_id: null, level: 1, sort_order: 11, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
+  { id: 'dept-12', name: '품질관리팀', code: 'QC', parent_id: null, level: 1, sort_order: 12, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
+  { id: 'dept-13', name: '측정실', code: 'MEAS', parent_id: null, level: 1, sort_order: 13, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
+  { id: 'dept-14', name: '출하팀', code: 'SHIP', parent_id: null, level: 1, sort_order: 14, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
+  { id: 'dept-15', name: '물류팀', code: 'LOG', parent_id: null, level: 1, sort_order: 15, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
+  { id: 'dept-16', name: '대기환경팀', code: 'ENV', parent_id: null, level: 1, sort_order: 16, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
 ];
 
 export const seedPositionRanks: PositionRank[] = [
-  { id: 'rank-1', name: '사원', level: 1, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
-  { id: 'rank-2', name: '주임', level: 2, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
-  { id: 'rank-3', name: '대리', level: 3, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
-  { id: 'rank-4', name: '과장', level: 4, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
-  { id: 'rank-5', name: '차장', level: 5, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
-  { id: 'rank-6', name: '부장', level: 6, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
-  { id: 'rank-7', name: '이사', level: 7, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
-  { id: 'rank-8', name: '상무', level: 8, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
-  { id: 'rank-9', name: '전무', level: 9, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
+  { id: 'rank-01', name: '사원', level: 1, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
+  { id: 'rank-02', name: '주임', level: 2, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
+  { id: 'rank-03', name: '대리', level: 3, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
+  { id: 'rank-04', name: '과장', level: 4, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
+  { id: 'rank-05', name: '차장', level: 5, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
+  { id: 'rank-06', name: '부장', level: 6, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
+  { id: 'rank-07', name: '수석부장', level: 7, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
+  { id: 'rank-08', name: '상무', level: 8, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
+  { id: 'rank-09', name: '전무', level: 9, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
   { id: 'rank-10', name: '대표이사', level: 10, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
 ];
 
 export const seedPositionTitles: PositionTitle[] = [
   { id: 'title-1', name: '팀원', level: 1, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
-  { id: 'title-2', name: '파트장', level: 2, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
-  { id: 'title-3', name: '팀장', level: 3, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
-  { id: 'title-4', name: '실장', level: 4, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
-  { id: 'title-5', name: '본부장', level: 5, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
+  { id: 'title-2', name: '조장', level: 2, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
+  { id: 'title-3', name: '반장', level: 3, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
+  { id: 'title-4', name: '직장', level: 4, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
+  { id: 'title-5', name: '실장', level: 5, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
   { id: 'title-6', name: '대표이사', level: 6, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
 ];
 
 export const seedJobCategories: JobCategory[] = [
   { id: 'jc-0', name: '미지정', code: 'NONE', description: '직무 확정 전', sort_order: 0, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
-  { id: 'jc-1', name: '사무관리직', code: 'OFFICE', description: '경영지원·총무·회계 등 관리 직무', sort_order: 1, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
-  { id: 'jc-2', name: '영업직', code: 'SALES', description: '국내외 영업 직무', sort_order: 2, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
-  { id: 'jc-3', name: '연구직', code: 'RESEARCH', description: '연구개발 직무', sort_order: 3, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
-  { id: 'jc-4', name: '생산기술직', code: 'TECH', description: '생산기술·설비 직무', sort_order: 4, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
-  { id: 'jc-5', name: '생산기능직', code: 'MANUF', description: '생산 현장 직무', sort_order: 5, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
+  { id: 'jc-1', name: '사무관리직', code: 'OFFICE', description: '경영지원·기획·전산 등', sort_order: 1, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
+  { id: 'jc-2', name: '연구개발직', code: 'RND', description: '기술연구소', sort_order: 2, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
+  { id: 'jc-3', name: '생산기술직', code: 'TECH', description: '생산기술·보전·금형', sort_order: 3, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
+  { id: 'jc-4', name: '품질검사직', code: 'QC', description: '품질관리·측정', sort_order: 4, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
+  { id: 'jc-5', name: '생산기능직', code: 'MANUF', description: '주조·사상 등 현장 기능', sort_order: 5, is_active: true, effective_from: null, effective_to: null, created_at: ORG_DATE, updated_at: ORG_DATE },
 ];
 
 /** 호봉표는 회사 임금테이블이 확정되기 전까지 비워 둡니다. */
 export const seedSalaryGrades: SalaryGrade[] = [];
 
 // ---------------------------------------------------------------------------
-// 인력 명부 — 사내 메일 명부 순서 그대로 (55명)
+// 인력 명부
 // ---------------------------------------------------------------------------
 
-/** 명부에서 확인된 값: 성명과 회사 이메일. */
-const ROSTER: ReadonlyArray<readonly [name: string, email: string]> = [
-  ['김대형', '1999hdk@daehan-at.co.kr'],
-  ['김동현', 'skyland127@daehan-at.co.kr'],
-  ['장현표', 'sirokuma@daehan-at.co.kr'],
-  ['김상택', 'sangtaeg.kim@daehan-at.co.kr'],
-  ['김태영', 'taeyoung.kim@daehan-at.co.kr'],
-  ['정기준', 'gijun.jeung@daehan-at.co.kr'],
-  ['여치호', 'chiho.yeo2@daehan-at.co.kr'],
-  ['문기영', 'kiyoung.moon@daehan-at.co.kr'],
-  ['안혜원', 'hyewon.an@daehan-at.co.kr'],
-  ['이장수', 'jangsu.lee@daehan-at.co.kr'],
-  ['김민지', 'minji.kim@daehan-at.co.kr'],
-  ['권용인', 'yongin.kwon@daehan-at.co.kr'],
-  ['김대엽', 'daeyup.kim@daehan-at.co.kr'],
-  ['김성식', 'sungsik.kim@daehan-at.co.kr'],
-  ['박정명', 'jeongmyeong.park@daehan-at.co.kr'],
-  ['성용진', 'mcjin7@daehan-at.co.kr'],
-  ['천야일', 'yail.chon@daehan-at.co.kr'],
-  ['박지태', 'jitae.park@daehan-at.co.kr'],
-  ['나성윤', 'sungyoon.na@daehan-at.co.kr'],
-  ['권오희', 'ohhee.kwon@daehan-at.co.kr'],
-  ['나승관', 'seungkwan.na@daehan-at.co.kr'],
-  ['조상호', 'sangho.jo@daehan-at.co.kr'],
-  ['공성환', 'sunghwan.gong@daehan-at.co.kr'],
-  ['권병현', 'byeonghyeon.kwon@daehan-at.co.kr'],
-  ['김영일', 'youngil.kim@daehan-at.co.kr'],
-  ['이태호', 'taeho.lee@daehan-at.co.kr'],
-  ['김종희', 'jonghee.kim@daehan-at.co.kr'],
-  ['남인수', 'insoo.nam@daehan-at.co.kr'],
-  ['송희복', 'heebok.song@daehan-at.co.kr'],
-  ['기민주', 'minjoo.gi@daehan-at.co.kr'],
-  ['아왈', 'awal.abdul@daehan-at.co.kr'],
-  ['이종섭', 'jongseob.lee@daehan-at.co.kr'],
-  ['이강빈', 'kangbin.lee@daehan-at.co.kr'],
-  ['김동식', 'dongsick.kim@daehan-at.co.kr'],
-  ['손민재', 'minjae.son@daehan-at.co.kr'],
-  ['최규돈', 'gyudon.choi@daehan-at.co.kr'],
-  ['김성훈', 'seonghun.kim@daehan-at.co.kr'],
-  ['최민식', 'minsik.choi@daehan-at.co.kr'],
-  ['황해영', 'haeyeong.hwang@daehan-at.co.kr'],
-  ['김황희', 'hwanghee.kim@daehan-at.co.kr'],
-  ['배영미', 'youngmi.bae@daehan-at.co.kr'],
-  ['유수성', 'soosung.yoo@daehan-at.co.kr'],
-  ['최영지', 'yeongji.choi@daehan-at.co.kr'],
-  ['김지일', 'jiil.kim@daehan-at.co.kr'],
-  ['정재훈', 'jeongjaehun@daehan-at.co.kr'],
-  ['박건식', 'gunshik.park@daehan-at.co.kr'],
-  ['김성주', 'sungju.kim@daehan-at.co.kr'],
-  ['박성건', 'sunggun.park@daehan-at.co.kr'],
-  ['정진우', 'jinwoo.jung@daehan-at.co.kr'],
-  ['최영희', 'younghee.choi@daehan-at.co.kr'],
-  ['추영진', 'youngjin.chu@daehan-at.co.kr'],
-  ['박용근', 'yougkeun.park@daehan-at.co.kr'],
-  ['백봉진', 'bongjin.baek@daehan-at.co.kr'],
-  ['권도엽', 'doyeop.kwon@daehan-at.co.kr'],
-  ['김보민', 'bomin.kim@daehan-at.co.kr'],
-] as const;
+interface RosterRow {
+  no: string;
+  name: string;
+  email: string | null;
+  hire: string;
+  dept: string;
+  rank: string;
+  title: string;
+  jobClass: Employee['job_class'];
+  note: string;
+}
 
-export const seedEmployees: Employee[] = ROSTER.map(([name, email], index) => {
-  const seq = String(index + 1).padStart(4, '0');
-  return {
-    id: `e${seq}`,
-    employee_number: seq,
-    name,
-    name_en: null,
-    email,
-    phone: null,
-    birth_date: null,
-    gender: null,
-    address: null,
-    address_detail: null,
-    zip_code: null,
-    department_id: 'dept-00', // 미배정 — 인력대장에서 실제 부서로 이동
-    position_rank_id: 'rank-1',
-    position_title_id: 'title-1',
-    employment_type: 'regular',
-    // 명부에 직군 표시가 없어 전원 사무직·월급제로 두었습니다. 현장직은
-    // 인력대장에서 바꾸면 급여방식이 시급으로 따라옵니다.
-    job_class: 'office',
-    pay_method: 'monthly',
-    hire_date: PLACEHOLDER_HIRE_DATE,
-    resignation_date: null,
-    status: 'active',
-    base_salary: 0,
-    hourly_wage: 0,
-    bank_name: null,
-    bank_account: null,
-    profile_image_url: null,
-    emergency_contact_name: null,
-    emergency_contact_phone: null,
-    emergency_contact_relation: null,
-    workplace_id: null,
-    work_arrangement: null,
-    arrangement_start_date: null,
-    arrangement_end_date: null,
-    resident_number: null,
-    personal_email: null,
-    marriage_date: null,
-    created_at: ORG_DATE,
-    updated_at: ORG_DATE,
-  } satisfies Employee;
-});
+const ROSTER: readonly RosterRow[] = [
+  { no: '미채번-김대형', name: '김대형', email: '1999hdk@daehan-at.co.kr', hire: '2026-01-01', dept: 'dept-00', rank: 'rank-10', title: 'title-6', jobClass: 'office', note: '' },
+  { no: 'DA151102001', name: '장현표', email: 'sirokuma@daehan-at.co.kr', hire: '2015-11-02', dept: 'dept-00', rank: 'rank-09', title: 'title-1', jobClass: 'office', note: '' },
+  { no: 'DA121101001', name: '김동현', email: 'skyland127@daehan-at.co.kr', hire: '2012-11-01', dept: 'dept-00', rank: 'rank-01', title: 'title-5', jobClass: 'office', note: '' },
+  { no: 'DA201116001', name: '여치호', email: 'chiho.yeo2@daehan-at.co.kr', hire: '2020-11-16', dept: 'dept-02', rank: 'rank-05', title: 'title-1', jobClass: 'office', note: '' },
+  { no: 'DA210809001', name: '백봉진', email: 'bongjin.baek@daehan-at.co.kr', hire: '2021-08-09', dept: 'dept-05', rank: 'rank-04', title: 'title-1', jobClass: 'office', note: '' },
+  { no: 'DA211018001', name: '김대엽', email: 'daeyup.kim@daehan-at.co.kr', hire: '2021-10-18', dept: 'dept-06', rank: 'rank-07', title: 'title-1', jobClass: 'office', note: '' },
+  { no: 'DA220620001', name: '정진우', email: 'jinwoo.jung@daehan-at.co.kr', hire: '2022-06-20', dept: 'dept-14', rank: 'rank-04', title: 'title-1', jobClass: 'office', note: '' },
+  { no: 'DA221201001', name: '황해영', email: 'haeyeong.hwang@daehan-at.co.kr', hire: '2022-12-01', dept: 'dept-12', rank: 'rank-05', title: 'title-1', jobClass: 'office', note: '' },
+  { no: 'DA230918001', name: '박정명', email: 'jeongmyeong.park@daehan-at.co.kr', hire: '2023-09-18', dept: 'dept-11', rank: 'rank-05', title: 'title-1', jobClass: 'office', note: '' },
+  { no: 'DA240205001', name: '김성식', email: 'sungsik.kim@daehan-at.co.kr', hire: '2024-02-05', dept: 'dept-11', rank: 'rank-05', title: 'title-1', jobClass: 'office', note: '' },
+  { no: 'DA240213001', name: '천야일', email: 'yail.chon@daehan-at.co.kr', hire: '2024-02-13', dept: 'dept-06', rank: 'rank-05', title: 'title-1', jobClass: 'office', note: '' },
+  { no: 'DA230522001', name: '김민정', email: null, hire: '2023-05-22', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'office', note: '명부 직위: 청소' },
+  { no: 'DA240701001', name: '김황희', email: 'hwanghee.kim@daehan-at.co.kr', hire: '2024-07-01', dept: 'dept-12', rank: 'rank-04', title: 'title-1', jobClass: 'office', note: '' },
+  { no: 'DA240827001', name: '배영미', email: 'youngmi.bae@daehan-at.co.kr', hire: '2024-08-27', dept: 'dept-00', rank: 'rank-04', title: 'title-1', jobClass: 'office', note: '' },
+  { no: 'DA250310001', name: '김성훈', email: 'seonghun.kim@daehan-at.co.kr', hire: '2025-03-10', dept: 'dept-12', rank: 'rank-05', title: 'title-1', jobClass: 'office', note: '' },
+  { no: 'DA250731001', name: '성용진', email: 'mcjin7@daehan-at.co.kr', hire: '2025-07-31', dept: 'dept-06', rank: 'rank-05', title: 'title-1', jobClass: 'office', note: '' },
+  { no: 'DA250804001', name: '김상택', email: 'sangtaeg.kim@daehan-at.co.kr', hire: '2025-08-04', dept: 'dept-00', rank: 'rank-08', title: 'title-1', jobClass: 'office', note: '' },
+  { no: 'DA250908001', name: '추영진', email: 'youngjin.chu@daehan-at.co.kr', hire: '2025-09-08', dept: 'dept-14', rank: 'rank-03', title: 'title-1', jobClass: 'office', note: '' },
+  { no: 'DA251013001', name: '박용근', email: 'yougkeun.park@daehan-at.co.kr', hire: '2025-10-13', dept: 'dept-00', rank: 'rank-05', title: 'title-1', jobClass: 'office', note: '' },
+  { no: 'DA251111001', name: '이장수', email: 'jangsu.lee@daehan-at.co.kr', hire: '2025-11-11', dept: 'dept-03', rank: 'rank-04', title: 'title-1', jobClass: 'office', note: '' },
+  { no: 'DA251215001', name: '유수성', email: 'soosung.yoo@daehan-at.co.kr', hire: '2025-12-15', dept: 'dept-13', rank: 'rank-02', title: 'title-1', jobClass: 'office', note: '' },
+  { no: 'DA260102001', name: '김태영', email: 'taeyoung.kim@daehan-at.co.kr', hire: '2026-01-02', dept: 'dept-05', rank: 'rank-08', title: 'title-1', jobClass: 'office', note: '' },
+  { no: 'DA260105001', name: '문기영', email: 'kiyoung.moon@daehan-at.co.kr', hire: '2026-01-05', dept: 'dept-16', rank: 'rank-04', title: 'title-1', jobClass: 'office', note: '' },
+  { no: 'DA260202001', name: '최규돈', email: 'gyudon.choi@daehan-at.co.kr', hire: '2026-02-02', dept: 'dept-12', rank: 'rank-06', title: 'title-1', jobClass: 'office', note: '' },
+  { no: 'DA260427001', name: '박건식', email: 'gunshik.park@daehan-at.co.kr', hire: '2026-04-27', dept: 'dept-07', rank: 'rank-05', title: 'title-1', jobClass: 'office', note: '' },
+  { no: 'DA260506001', name: '김민지', email: 'minji.kim@daehan-at.co.kr', hire: '2026-05-06', dept: 'dept-01', rank: 'rank-03', title: 'title-1', jobClass: 'office', note: '' },
+  { no: 'DA260506002', name: '최영지', email: 'yeongji.choi@daehan-at.co.kr', hire: '2026-05-06', dept: 'dept-12', rank: 'rank-02', title: 'title-1', jobClass: 'office', note: '' },
+  { no: 'DA260518001', name: '김보민', email: 'bomin.kim@daehan-at.co.kr', hire: '2026-05-18', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'office', note: '' },
+  { no: 'DA260818001', name: '권용인', email: 'yongin.kwon@daehan-at.co.kr', hire: '2026-08-18', dept: 'dept-01', rank: 'rank-04', title: 'title-1', jobClass: 'office', note: '' },
+  { no: 'DA260818002', name: '정기준', email: 'gijun.jeung@daehan-at.co.kr', hire: '2026-08-18', dept: 'dept-04', rank: 'rank-08', title: 'title-1', jobClass: 'office', note: '' },
+  { no: 'DA260901001', name: '권오희', email: 'ohhee.kwon@daehan-at.co.kr', hire: '2026-09-01', dept: 'dept-06', rank: 'rank-05', title: 'title-1', jobClass: 'office', note: '' },
+  { no: 'DA211018002', name: '오현주', email: null, hire: '2021-10-18', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'office', note: '명부 직위: 검' },
+  { no: 'DA211110001', name: '정경화', email: null, hire: '2021-11-10', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'office', note: '명부 직위: 검' },
+  { no: 'DA240805001', name: '김지일', email: 'jiil.kim@daehan-at.co.kr', hire: '2024-08-05', dept: 'dept-00', rank: 'rank-01', title: 'title-2', jobClass: 'office', note: '' },
+  { no: 'DA251117001', name: '장영수', email: null, hire: '2025-11-17', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'office', note: '명부 직위: 검' },
+  { no: 'DA251216001', name: '구현아', email: null, hire: '2025-12-16', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'office', note: '명부 직위: 검' },
+  { no: 'DA260427002', name: '조말순', email: null, hire: '2026-04-27', dept: 'dept-12', rank: 'rank-01', title: 'title-1', jobClass: 'office', note: '' },
+  { no: 'DA260423001', name: '박지순', email: null, hire: '2026-04-23', dept: 'dept-12', rank: 'rank-01', title: 'title-1', jobClass: 'office', note: '' },
+  { no: 'DA260427003', name: '오여진', email: null, hire: '2026-04-27', dept: 'dept-12', rank: 'rank-01', title: 'title-1', jobClass: 'office', note: '' },
+  { no: 'DA260427004', name: '전경진', email: null, hire: '2026-04-27', dept: 'dept-12', rank: 'rank-01', title: 'title-1', jobClass: 'office', note: '' },
+  { no: 'DA170607001', name: '박성진', email: null, hire: '2017-06-07', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '명부 직위: 생' },
+  { no: 'DA190611001', name: '권은희', email: null, hire: '2019-06-11', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '명부 직위: 생' },
+  { no: 'DA200921001', name: '비말', email: null, hire: '2020-09-21', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: 'E-7 · 명부 직위: 생' },
+  { no: 'DA201020001', name: '박지태', email: 'jitae.park@daehan-at.co.kr', hire: '2020-10-20', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '명부 직위: 생' },
+  { no: 'DA201028001', name: '쌈부', email: null, hire: '2020-10-28', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: 'E-7 · 명부 직위: 생' },
+  { no: 'DA201012001', name: '이봉순', email: null, hire: '2020-10-12', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '명부 직위: 생' },
+  { no: 'DA210215001', name: '최순복', email: null, hire: '2021-02-15', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '명부 직위: 생' },
+  { no: 'DA211028001', name: '딜', email: null, hire: '2021-10-28', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: 'E-7 · 명부 직위: 생' },
+  { no: 'DA220525001', name: '우재범', email: null, hire: '2022-05-25', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '명부 직위: 생' },
+  { no: 'DA220704001', name: '나라앤', email: null, hire: '2022-07-04', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: 'E-7 · 명부 직위: 생' },
+  { no: 'DA230125001', name: '사라드', email: null, hire: '2023-01-25', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: 'E-9/네팔 · 명부 직위: 생' },
+  { no: 'DA230421001', name: '비제이', email: null, hire: '2023-04-21', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: 'E-7 · 명부 직위: 생' },
+  { no: 'DA230626001', name: '크리스너', email: null, hire: '2023-06-26', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '캐스팅 · E-7 · 명부 직위: 생(캐)' },
+  { no: 'DA230823001', name: '러메스', email: null, hire: '2023-08-23', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: 'E-7 · 명부 직위: 생' },
+  { no: 'DA231004001', name: '구룽', email: null, hire: '2023-10-04', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: 'E-9/네팔 · 명부 직위: 생' },
+  { no: 'DA240109001', name: '지렐', email: null, hire: '2024-01-09', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: 'E-9/네팔 · 명부 직위: 생' },
+  { no: 'DA240102001', name: '네와스', email: null, hire: '2024-01-02', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: 'E-9/네팔 · 명부 직위: 생' },
+  { no: 'DA240520001', name: '나성준', email: null, hire: '2024-05-20', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '명부 직위: 생' },
+  { no: 'DA240614001', name: '가루키', email: null, hire: '2024-06-14', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: 'E-7 · 명부 직위: 생' },
+  { no: 'DA240816001', name: '비벡', email: null, hire: '2024-08-16', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: 'E-9/네팔 · 명부 직위: 생' },
+  { no: 'DA240829001', name: '류윤정', email: null, hire: '2024-08-29', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '명부 직위: 생' },
+  { no: 'DA240905001', name: '후사인', email: null, hire: '2024-09-05', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '캐스팅 · E-9/방글라데시 · 명부 직위: 생(캐)' },
+  { no: 'DA240923001', name: '김경목', email: null, hire: '2024-09-23', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '명부 직위: 생' },
+  { no: 'DA240925001', name: '만달', email: null, hire: '2024-09-25', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: 'E-9/네팔 · 명부 직위: 생' },
+  { no: 'DA241021001', name: '알빈', email: null, hire: '2024-10-21', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: 'F-6 · 명부 직위: 생' },
+  { no: 'DA241022001', name: '림부', email: null, hire: '2024-10-22', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: 'E-9/네팔 · 명부 직위: 생' },
+  { no: 'DA241022002', name: '가네쉬', email: null, hire: '2024-10-22', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: 'E-9/네팔 · 명부 직위: 생' },
+  { no: 'DA241106001', name: '찬드라', email: null, hire: '2024-11-06', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: 'E-9/네팔 · 명부 직위: 생' },
+  { no: 'DA241111001', name: '이수윤', email: null, hire: '2024-11-11', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '명부 직위: 생' },
+  { no: 'DA241113001', name: '푼', email: null, hire: '2024-11-13', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: 'E-9/네팔 · 명부 직위: 생' },
+  { no: 'DA241111002', name: '김미양', email: null, hire: '2024-11-11', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '명부 직위: 검' },
+  { no: 'DA241212001', name: '아나따샤이', email: null, hire: '2024-12-12', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: 'E-9/태국 · 명부 직위: 생' },
+  { no: 'DA241212002', name: '가이손', email: null, hire: '2024-12-12', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: 'E-9/태국 · 명부 직위: 생' },
+  { no: 'DA241209001', name: '비핀', email: null, hire: '2024-12-09', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '캐스팅 · E-7 · 명부 직위: 생(캐)' },
+  { no: 'DA250407001', name: '김보은', email: null, hire: '2025-04-07', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '명부 직위: 생' },
+  { no: 'DA250401001', name: '이강빈', email: 'kangbin.lee@daehan-at.co.kr', hire: '2025-04-01', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '캐스팅 · 명부 직위: 생(캐)' },
+  { no: 'DA250414001', name: '강동순', email: null, hire: '2025-04-14', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '명부 직위: 생' },
+  { no: 'DA251201001', name: '권도엽', email: 'doyeop.kwon@daehan-at.co.kr', hire: '2025-12-01', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '명부 직위: 생' },
+  { no: 'DA251013002', name: '니할', email: null, hire: '2025-10-13', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '캐스팅 · E-9/스리랑카 · 명부 직위: 생(캐)' },
+  { no: 'DA251017001', name: '용석천', email: null, hire: '2025-10-17', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '명부 직위: 생' },
+  { no: 'DA251110001', name: '비노드', email: null, hire: '2025-11-10', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: 'E-9/네팔 · 명부 직위: 생' },
+  { no: 'DA251209001', name: '라만', email: null, hire: '2025-12-09', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '캐스팅 · E-7 · 명부 직위: 생(캐)' },
+  { no: 'DA250421001', name: '전태상', email: null, hire: '2025-04-21', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '명부 직위: 검' },
+  { no: 'DA260122001', name: '자키르', email: null, hire: '2026-01-22', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '캐스팅 · E-9/방글라데시 · 명부 직위: 생(캐)' },
+  { no: 'DA260127001', name: '아자룰', email: null, hire: '2026-01-27', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '캐스팅 · E-9/방글라데시 · 명부 직위: 생(캐)' },
+  { no: 'DA260304001', name: '로이', email: null, hire: '2026-03-04', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '캐스팅 · E-9/방글라데시 · 명부 직위: 생(캐)' },
+  { no: 'DA260323001', name: '원영준', email: null, hire: '2026-03-23', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '명부 직위: 생' },
+  { no: 'DA260324001', name: '유태식', email: null, hire: '2026-03-24', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '명부 직위: 생' },
+  { no: 'DA260423002', name: '정점자', email: null, hire: '2026-04-23', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '명부 직위: 생' },
+  { no: 'DA260420001', name: '강영아', email: null, hire: '2026-04-20', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '명부 직위: 생' },
+  { no: 'DA260427005', name: '나민진', email: null, hire: '2026-04-27', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '명부 직위: 생' },
+  { no: 'DA260527001', name: '마지드', email: null, hire: '2026-05-27', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: 'G-1/파키스탄 · 명부 직위: 생' },
+  { no: 'DA260605001', name: '미아', email: null, hire: '2026-06-05', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: 'E-9/방글라데시 · 명부 직위: 생' },
+  { no: 'DA260608001', name: '웬디', email: null, hire: '2026-06-08', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: 'F-6/필리핀 · 명부 직위: 생' },
+  { no: 'DA260721001', name: '연지만', email: null, hire: '2026-07-21', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '명부 직위: 생' },
+  { no: 'DA260727001', name: '이동형', email: null, hire: '2026-07-27', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '명부 직위: 생' },
+  { no: 'DA260901002', name: '이가온', email: null, hire: '2026-09-01', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'office', note: '명부 직위: 실슶' },
+  { no: 'DA210222001', name: '공성환', email: 'sunghwan.gong@daehan-at.co.kr', hire: '2021-02-22', dept: 'dept-00', rank: 'rank-05', title: 'title-1', jobClass: 'field_manager', note: '' },
+  { no: 'DA210222002', name: '기민주', email: 'minjoo.gi@daehan-at.co.kr', hire: '2021-02-22', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field_manager', note: '캐스팅 · 명부 직위: 생(캐)' },
+  { no: 'DA240812001', name: '김성주', email: 'sungju.kim@daehan-at.co.kr', hire: '2024-08-12', dept: 'dept-00', rank: 'rank-03', title: 'title-1', jobClass: 'field_manager', note: '' },
+  { no: 'DA240923002', name: '조상호', email: 'sangho.jo@daehan-at.co.kr', hire: '2024-09-23', dept: 'dept-00', rank: 'rank-06', title: 'title-1', jobClass: 'field_manager', note: '' },
+  { no: 'DA250102001', name: '이태호', email: 'taeho.lee@daehan-at.co.kr', hire: '2025-01-02', dept: 'dept-10', rank: 'rank-03', title: 'title-1', jobClass: 'field_manager', note: '' },
+  { no: 'DA250317001', name: '남인수', email: 'insoo.nam@daehan-at.co.kr', hire: '2025-03-17', dept: 'dept-09', rank: 'rank-01', title: 'title-3', jobClass: 'field_manager', note: '' },
+  { no: 'DA250402001', name: '나승관', email: 'seungkwan.na@daehan-at.co.kr', hire: '2025-04-02', dept: 'dept-09', rank: 'rank-06', title: 'title-1', jobClass: 'field_manager', note: '' },
+  { no: 'DA250520001', name: '김종희', email: 'jonghee.kim@daehan-at.co.kr', hire: '2025-05-20', dept: 'dept-09', rank: 'rank-01', title: 'title-3', jobClass: 'field_manager', note: '' },
+  { no: 'DA251103001', name: '송희복', email: 'heebok.song@daehan-at.co.kr', hire: '2025-11-03', dept: 'dept-00', rank: 'rank-01', title: 'title-3', jobClass: 'field_manager', note: '' },
+  { no: 'DA260105002', name: '아왈', email: 'awal.abdul@daehan-at.co.kr', hire: '2026-01-05', dept: 'dept-00', rank: 'rank-01', title: 'title-3', jobClass: 'field_manager', note: 'F-6' },
+  { no: 'DA260401001', name: '최민식', email: 'minsik.choi@daehan-at.co.kr', hire: '2026-04-01', dept: 'dept-13', rank: 'rank-05', title: 'title-1', jobClass: 'field_manager', note: '' },
+  { no: 'DA260401002', name: '최영희', email: 'younghee.choi@daehan-at.co.kr', hire: '2026-04-01', dept: 'dept-15', rank: 'rank-04', title: 'title-1', jobClass: 'field_manager', note: '' },
+  { no: 'DA260401003', name: '박성건', email: 'sunggun.park@daehan-at.co.kr', hire: '2026-04-01', dept: 'dept-15', rank: 'rank-04', title: 'title-1', jobClass: 'field_manager', note: '' },
+  { no: 'DA260401004', name: '김영일', email: 'youngil.kim@daehan-at.co.kr', hire: '2026-04-01', dept: 'dept-08', rank: 'rank-05', title: 'title-1', jobClass: 'field_manager', note: '' },
+  { no: 'DA260401005', name: '김동식', email: 'dongsick.kim@daehan-at.co.kr', hire: '2026-04-01', dept: 'dept-08', rank: 'rank-01', title: 'title-1', jobClass: 'field_manager', note: '' },
+  { no: 'DA260401006', name: '이종섭', email: 'jongseob.lee@daehan-at.co.kr', hire: '2026-04-01', dept: 'dept-08', rank: 'rank-01', title: 'title-4', jobClass: 'field_manager', note: '' },
+  { no: 'DA260608002', name: '권병현', email: 'byeonghyeon.kwon@daehan-at.co.kr', hire: '2026-06-08', dept: 'dept-11', rank: 'rank-05', title: 'title-1', jobClass: 'field_manager', note: '' },
+  { no: 'DA260810001', name: '정재훈', email: 'jeongjaehun@daehan-at.co.kr', hire: '2026-08-10', dept: 'dept-12', rank: 'rank-04', title: 'title-1', jobClass: 'field_manager', note: '' },
+];
+
+export const seedEmployees: Employee[] = ROSTER.map((r) => ({
+  id: `e-${r.no}`,
+  employee_number: r.no,
+  name: r.name,
+  name_en: null,
+  email: r.email,
+  phone: null,
+  birth_date: null,
+  gender: null,
+  address: null,
+  address_detail: null,
+  zip_code: null,
+  department_id: r.dept,
+  position_rank_id: r.rank,
+  position_title_id: r.title,
+  employment_type: 'regular',
+  job_class: r.jobClass,
+  // 현장 시급직만 시급제, 사무직·현장관리직은 월급제입니다.
+  pay_method: r.jobClass === 'field' ? 'hourly' : 'monthly',
+  hire_date: r.hire,
+  resignation_date: null,
+  status: 'active',
+  base_salary: 0,
+  hourly_wage: 0,
+  bank_name: null,
+  bank_account: null,
+  profile_image_url: null,
+  emergency_contact_name: null,
+  emergency_contact_phone: null,
+  emergency_contact_relation: null,
+  workplace_id: null,
+  work_arrangement: null,
+  arrangement_start_date: null,
+  arrangement_end_date: null,
+  resident_number: null,
+  personal_email: null,
+  marriage_date: null,
+  created_at: ORG_DATE,
+  updated_at: ORG_DATE,
+}));
 
 // ---------------------------------------------------------------------------
-// 부속 정보 — 확인된 자료가 없어 비워 둡니다 (사원카드에서 개별 입력)
+// 부속 정보 — 명부에 없어 비워 둡니다 (사원카드에서 개별 입력)
 // ---------------------------------------------------------------------------
 
 export const seedCareerHistories: CareerHistory[] = [];

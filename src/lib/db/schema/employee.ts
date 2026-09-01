@@ -19,10 +19,13 @@ export const EMPLOYMENT_TYPES = ['regular', 'contract', 'parttime', 'intern'] as
  *
  * 고용형태(정규/계약)와도, 급여지급방식(월급/시급)과도 다른 축입니다. 정규직
  * 현장직과 정규직 사무직은 고용형태가 같지만 급여 계산과 근태 관리가 다르므로
- * 고용형태로 대신할 수 없습니다. 국내 인사 시스템이 오래 써 온 구분이고,
- * 파나시아 구 ERP에도 `HU067 부서그룹 = 사무관리직 / 생산현장직`으로 있었습니다.
+ * 고용형태로 대신할 수 없습니다.
+ *
+ * 현장은 다시 둘로 갈립니다 — 반장·직장·과장처럼 월급을 받는 **현장관리직**과,
+ * 실근로시간으로 급여를 받는 **현장 시급직**입니다. 둘을 한 값으로 묶으면
+ * 급여방식이 섞여 대장에서 구분할 수 없습니다.
  */
-export const JOB_CLASSES = ['office', 'field'] as const;
+export const JOB_CLASSES = ['office', 'field_manager', 'field'] as const;
 
 /**
  * 급여지급방식.
@@ -38,7 +41,13 @@ export const employees = pgTable('employees', {
   employeeNumber: text('employee_number').unique().notNull(),
   name: text('name').notNull(),
   nameEn: text('name_en'),
-  email: text('email').unique().notNull(),
+  /**
+   * 회사 이메일. **필수가 아닙니다** — 현장 근로자는 회사 계정이 없는 경우가
+   * 많습니다. 예전에는 NOT NULL이라 계정 없는 사람을 넣으려면 가짜 주소를
+   * 만들어야 했고, 그런 주소는 언젠가 실제로 메일이 발송됩니다.
+   * unique는 유지합니다 — PostgreSQL은 NULL 중복을 허용합니다.
+   */
+  email: text('email').unique(),
   phone: text('phone'),
   birthDate: date('birth_date'),
   gender: text('gender', { enum: ['M', 'F'] }),

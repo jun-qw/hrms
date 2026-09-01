@@ -266,12 +266,13 @@ export interface SalaryGrade {
   updated_at: string;
 }
 
-export type JobClass = 'office' | 'field';
+export type JobClass = 'office' | 'field_manager' | 'field';
 export type PayMethod = 'monthly' | 'annual' | 'hourly' | 'daily';
 
 export const JOB_CLASS_LABEL: Record<JobClass, string> = {
   office: '사무직',
-  field: '현장직',
+  field_manager: '현장관리직',
+  field: '현장 시급직',
 };
 
 export const PAY_METHOD_LABEL: Record<PayMethod, string> = {
@@ -284,6 +285,8 @@ export const PAY_METHOD_LABEL: Record<PayMethod, string> = {
 /** 직군을 고르면 따라오는 급여방식 기본값. 현장직은 통상 시급입니다. */
 export const DEFAULT_PAY_METHOD: Record<JobClass, PayMethod> = {
   office: 'monthly',
+  /** 현장관리직은 반장·직장·과장급으로 월급을 받습니다. */
+  field_manager: 'monthly',
   field: 'hourly',
 };
 
@@ -292,7 +295,8 @@ export interface Employee {
   employee_number: string;
   name: string;
   name_en: string | null;
-  email: string;
+  /** 회사 계정이 없는 현장 근로자는 비어 있습니다. */
+  email: string | null;
   phone: string | null;
   birth_date: string | null;
   gender: Gender | null;

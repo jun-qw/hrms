@@ -93,7 +93,11 @@ export function DataGrid<T extends { id: string }>({
         const raw = column.value(row);
         const text = raw === null || raw === undefined ? '' : String(raw);
         if (column.filter === 'select') {
-          if (text !== needle) return false;
+          // 드롭다운은 코드를 값으로 갖지만(예: 'office') 셀은 라벨을 보여
+          // 줍니다(예: '사무직'). 코드끼리만 비교하면 어떤 행도 걸리지 않으므로
+          // 고른 항목의 라벨과도 대조합니다.
+          const option = column.options?.find((o) => o.value === needle);
+          if (text !== needle && text !== option?.label) return false;
         } else if (!text.toLowerCase().includes(needle.toLowerCase())) {
           return false;
         }

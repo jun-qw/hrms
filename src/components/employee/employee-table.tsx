@@ -34,7 +34,7 @@ export function EmployeeTable({ employees }: EmployeeTableProps) {
     (e) =>
       e.name.includes(search) ||
       e.employee_number.includes(search) ||
-      e.email.includes(search) ||
+      (e.email ?? '').includes(search) ||
       e.department?.name?.includes(search)
   );
 

@@ -187,7 +187,9 @@ export async function bulkHire(rows: BulkHireRow[]): Promise<BulkHireResult> {
     await assertHrWrite();
 
     const existing = await db.select().from(schema.employees);
-    const takenEmails = new Set(existing.map((e) => e.email.toLowerCase()));
+    const takenEmails = new Set(
+      existing.map((e) => e.email?.toLowerCase()).filter((v): v is string => Boolean(v)),
+    );
     // 숫자로만 된 사번을 기준으로 다음 번호를 정합니다. 회사 채번 규칙이
     // 따로 있으면 인력대장에서 바꾸면 됩니다.
     let next =

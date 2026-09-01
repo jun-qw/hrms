@@ -24,8 +24,8 @@ import {
 
 // 로그인 계정: 인사 담당자와 일반 사용자 각각 하나씩, 명부의 실제 인원에 연결.
 const DEMO_USERS = [
-  { email: 'hr@daehan-at.co.kr', role: 'hr_manager' as const, seedEmployeeId: 'e0006' },
-  { email: 'employee@daehan-at.co.kr', role: 'employee' as const, seedEmployeeId: 'e0001' },
+  { email: 'hr@daehan-at.co.kr', role: 'hr_manager' as const, seedEmployeeId: 'e-DA260818002' },
+  { email: 'employee@daehan-at.co.kr', role: 'employee' as const, seedEmployeeId: 'e-DA151102001' },
 ];
 const DEMO_PASSWORD = 'Demo1234!';
 
@@ -52,7 +52,33 @@ export async function runSeedDemo(options: { force?: boolean } = {}) {
     }
     console.log('Wiping employee-module tables ...');
     await db.update(schema.users).set({ employeeId: null });
+
+    // 직원을 참조하는 테이블을 먼저 비웁니다. 하나라도 빠지면 외래키 제약에
+    // 걸려 --force 재적재가 통째로 실패합니다 — 실제로 연차 잔액과 급여가
+    // 빠져 있어서, 한 번이라도 급여를 돌린 뒤에는 재적재가 막혔습니다.
+    await db.delete(schema.attendanceModifications);
     await db.delete(schema.attendances);
+    await db.delete(schema.attendanceCloseouts);
+    await db.delete(schema.flexWorkRequests);
+    await db.delete(schema.flexScheduleAssignments);
+    await db.delete(schema.employeeWorkSchedules);
+    await db.delete(schema.leavePromotionAlerts);
+    await db.delete(schema.leaveUsagePlans);
+    await db.delete(schema.leaveBalanceAdjustments);
+    await db.delete(schema.leaveRequests);
+    await db.delete(schema.leaveBalances);
+    await db.delete(schema.payrollDetails);
+    await db.delete(schema.payrolls);
+    await db.delete(schema.employeePayrollSettings);
+    await db.delete(schema.retirementSettlements);
+    await db.delete(schema.employeeDocuments);
+    await db.delete(schema.employeeAssignments);
+    await db.delete(schema.workflows);
+    await db.delete(schema.appointments);
+    await db.delete(schema.notifications);
+    await db.delete(schema.hrIssues);
+    await db.delete(schema.approvalLines);
+    await db.delete(schema.approvals);
     await db.delete(schema.careerHistories);
     await db.delete(schema.educationHistories);
     await db.delete(schema.certifications);
@@ -151,10 +177,13 @@ export async function runSeedDemo(options: { force?: boolean } = {}) {
       positionRankId: id(rankIds, e.position_rank_id),
       positionTitleId: id(titleIds, e.position_title_id),
       employmentType: e.employment_type,
+      jobClass: e.job_class,
+      payMethod: e.pay_method,
       hireDate: e.hire_date,
       resignationDate: e.resignation_date,
       status: e.status,
       baseSalary: String(e.base_salary ?? 0),
+      hourlyWage: String(e.hourly_wage ?? 0),
       bankName: e.bank_name,
       bankAccount: e.bank_account,
       profileImageUrl: e.profile_image_url,
