@@ -51,8 +51,15 @@ export interface GridEdit<T> {
    * store, or an error message the grid shows on the cell.
    */
   parse: (input: string, row: T) => { ok: true; value: unknown } | { ok: false; error: string };
-  /** Field on the row that `parse` produces a value for. */
-  field: keyof T & string;
+  /**
+   * Identifier the grid hands back with the parsed value.
+   *
+   * Usually a field name on the row, but not always: the attendance register
+   * builds one column per day of the month (`d1` … `d31`), and those are not
+   * properties of the row type. The grid never interprets this — it only
+   * passes it through to `onEdit`.
+   */
+  field: string;
   /** Editor control. 'select' uses `options`. */
   control?: 'text' | 'number' | 'date' | 'select';
 }

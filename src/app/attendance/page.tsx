@@ -8,7 +8,7 @@ import { AttendanceRegisterDialog } from '@/components/attendance/attendance-reg
 import { AttendanceRequestForm } from '@/components/attendance/attendance-request-form';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, Plus, Building2, Plane, MapPin, Laptop, Clock, UserX, Palmtree, TimerOff, Lock, FileCheck, CalendarClock } from 'lucide-react';
+import { Calendar, Plus, Building2, Plane, MapPin, Laptop, Clock, UserX, Palmtree, TimerOff, Lock, FileCheck, CalendarClock, Table2 } from 'lucide-react';
 import Link from 'next/link';
 import { useAttendanceStore } from '@/lib/stores/attendance-store';
 import { useEmployeeStore } from '@/lib/stores/employee-store';
@@ -83,6 +83,12 @@ export default function AttendancePage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">근태관리</h1>
         <div className="flex gap-2">
+          <Link href="/attendance/register">
+            <Button variant="outline" size="sm">
+              <Table2 className="mr-1.5 h-3.5 w-3.5" />
+              근태대장
+            </Button>
+          </Link>
           <Button onClick={() => setRequestOpen(true)} className="bg-blue-600 hover:bg-blue-700">
             <FileCheck className="h-4 w-4 mr-2" />
             근태 신청 (전자결재)

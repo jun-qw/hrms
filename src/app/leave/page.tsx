@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Settings, X, CalendarDays, Thermometer, Heart, MoreHorizontal } from 'lucide-react';
+import { Plus, Settings, X, CalendarDays, Thermometer, Heart, MoreHorizontal, Table2 } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
@@ -64,6 +64,12 @@ export default function LeavePage() {
           )}
         </div>
         <div className="flex gap-2">
+          <Link href="/leave/register">
+            <Button variant="outline" size="sm">
+              <Table2 className="mr-1.5 h-3.5 w-3.5" />
+              연차대장
+            </Button>
+          </Link>
           <Link href="/leave/admin">
             <Button variant="outline">
               <Settings className="h-4 w-4 mr-2" />

@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useEmployeeDirectory, type DirectoryEmployee } from '@/lib/hooks/use-employee-directory';
 import { Breadcrumb } from '@/components/layout/breadcrumb';
@@ -92,6 +94,8 @@ interface AttendanceSummary {
   overtimeHours: number;
   nightHours: number;
   holidayHours: number;
+  /** 실제 기록된 근로시간 합계. 시급직 기본급의 근거입니다. */
+  workedHours: number;
 }
 
 interface EarningRow {
@@ -143,33 +147,6 @@ const STEPS = [
   { num: 4, label: '공제항목 설정', icon: Calculator },
   { num: 5, label: '계산 / 결과', icon: Save },
 ];
-
-// ---- Mock attendance generator ----
-
-function generateMockAttendance(empId: string, month: number, year: number): AttendanceSummary {
-  const seed = empId.charCodeAt(3) + Number(month);
-  const pseudoRandom = (n: number, max: number) => ((seed * 31 + n * 17 + 7) % (max + 1));
-  const workDays = 20 + pseudoRandom(1, 2);
-  const late = pseudoRandom(2, 3);
-  const absent = pseudoRandom(3, 1);
-  const earlyLeave = pseudoRandom(4, 1);
-  const leaveD = pseudoRandom(5, 2);
-  const overtimeHours = pseudoRandom(6, 15);
-  const nightHours = pseudoRandom(7, 5);
-  const holidayHours = pseudoRandom(8, 8);
-  return {
-    employeeId: empId,
-    workDays,
-    normal: workDays - late - absent - earlyLeave - leaveD,
-    late,
-    earlyLeave,
-    absent,
-    leave: leaveD,
-    overtimeHours,
-    nightHours,
-    holidayHours,
-  };
-}
 
 // ---- Component ----
 
@@ -335,43 +312,55 @@ export default function PayrollCalculatePage() {
 
   const buildAttendanceData = useCallback(() => {
     const map = new Map<string, AttendanceSummary>();
+    const prefix = `${year}-${String(month).padStart(2, '0')}`;
+
     for (const emp of selectedEmployees) {
-      const records = attendanceRecords.filter((r) => {
-        const d = new Date(r.date);
-        return (
-          r.employee_id === emp.id &&
-          d.getFullYear() === Number(year) &&
-          d.getMonth() + 1 === Number(month)
-        );
-      });
-      if (records.length > 0) {
-        let normal = 0, late = 0, earlyLeave = 0, absent = 0, leaveD = 0, ot = 0;
-        for (const r of records) {
-          if (r.status === 'normal') normal++;
-          else if (r.status === 'late') late++;
-          else if (r.status === 'early_leave') earlyLeave++;
-          else if (r.status === 'absent') absent++;
-          else if (r.status === 'leave' || r.status === 'half_day') leaveD++;
-          ot += r.overtime_hours;
-        }
-        map.set(emp.id, {
-          employeeId: emp.id,
-          workDays: records.length,
-          normal,
-          late,
-          earlyLeave,
-          absent,
-          leave: leaveD,
-          overtimeHours: Math.round(ot * 100) / 100,
-          nightHours: generateMockAttendance(emp.id, Number(month), Number(year)).nightHours,
-          holidayHours: generateMockAttendance(emp.id, Number(month), Number(year)).holidayHours,
-        });
-      } else {
-        map.set(emp.id, generateMockAttendance(emp.id, Number(month), Number(year)));
+      const records = attendanceRecords.filter(
+        (r) => r.employee_id === emp.id && r.date.startsWith(prefix),
+      );
+
+      // 기록이 없으면 0으로 둡니다. 예전에는 가짜 근태를 만들어 채웠는데,
+      // 시급직은 실근로시간이 그대로 기본급이라 지어낸 숫자가 급여로 나갑니다.
+      // 비어 있으면 비어 있는 대로 보이고, 근태대장에서 채우게 해야 합니다.
+      let normal = 0, late = 0, earlyLeave = 0, absent = 0, leaveD = 0;
+      let ot = 0, night = 0, holiday = 0, hours = 0;
+
+      for (const r of records) {
+        if (r.status === 'normal') normal++;
+        else if (r.status === 'late') late++;
+        else if (r.status === 'early_leave') earlyLeave++;
+        else if (r.status === 'absent') absent++;
+        else if (r.status === 'leave' || r.status === 'half_day') leaveD++;
+        ot += r.overtime_hours ?? 0;
+        hours += r.work_hours ?? 0;
+        if (r.status === 'holiday') holiday += r.work_hours ?? 0;
       }
+
+      map.set(emp.id, {
+        employeeId: emp.id,
+        workDays: records.filter((r) => (r.work_hours ?? 0) > 0).length,
+        normal,
+        late,
+        earlyLeave,
+        absent,
+        leave: leaveD,
+        overtimeHours: Math.round(ot * 100) / 100,
+        nightHours: night,
+        holidayHours: Math.round(holiday * 100) / 100,
+        workedHours: Math.round(hours * 100) / 100,
+      });
     }
     setAttendanceData(map);
   }, [selectedEmployees, attendanceRecords, year, month]);
+
+  /** 근태가 한 건도 없는 사람 — 시급직이면 기본급이 0원이 되므로 반드시 짚어야 합니다. */
+  const noAttendance = useMemo(
+    () => selectedEmployees.filter((e) => (attendanceData.get(e.id)?.workDays ?? 0) === 0),
+    [selectedEmployees, attendanceData],
+  );
+  const hourlyNoAttendance = noAttendance.filter(
+    (e) => e.pay_method === 'hourly' || e.pay_method === 'daily',
+  ).length;
 
   // ---- Step 3: Build earning rows ----
 
@@ -386,7 +375,12 @@ export default function PayrollCalculatePage() {
       // 근무일수 × 1일 소정근로시간으로 환산합니다. 월 209시간을 근무일수로
       // 나누면 안 됩니다 — 209에는 주휴시간이 포함되어 있어 실근로시간보다
       // 20%가량 부풀려집니다.
-      const workedHours = (att?.workDays ?? 0) * rateSet.rates.standardDailyHours;
+      // 근태대장에 적힌 실근로시간을 그대로 씁니다. 기록이 없을 때만
+      // 근무일수 × 1일 소정근로시간으로 환산합니다.
+      const workedHours =
+        att?.workedHours && att.workedHours > 0
+          ? att.workedHours
+          : (att?.workDays ?? 0) * rateSet.rates.standardDailyHours;
       const { baseSalary, hourlyWage } = computeBaseFor(emp, workedHours, att?.workDays ?? 0, rateSet.rates);
 
       const empSettings = employeePayrollSettings.filter(
@@ -1001,6 +995,26 @@ export default function PayrollCalculatePage() {
         {/* ---- Step 2: 근태내역 확인 ---- */}
         {currentStep === 2 && (
           <div className="space-y-4">
+            {noAttendance.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2.5 text-xs">
+                <AlertTriangle className="h-4 w-4 shrink-0 text-destructive" />
+                <span>
+                  근태 기록이 하나도 없는 사람이 <strong>{noAttendance.length}명</strong> 있습니다
+                  {hourlyNoAttendance > 0 && (
+                    <>
+                      {' '}— 그중 <strong className="text-destructive">시급직 {hourlyNoAttendance}명</strong>은
+                      실근로시간이 그대로 기본급이라 이대로 계산하면 기본급이 0원이 됩니다
+                    </>
+                  )}
+                  . 근태대장에서 먼저 입력하세요.
+                </span>
+                <Link href="/attendance/register" className="ml-auto shrink-0">
+                  <Button variant="outline" size="sm" className="h-7 text-xs">
+                    근태대장 열기
+                  </Button>
+                </Link>
+              </div>
+            )}
             {attendanceStats && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <Card>
