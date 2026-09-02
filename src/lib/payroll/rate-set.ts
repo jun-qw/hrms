@@ -28,6 +28,40 @@ export interface TaxBracket {
   progressive: number;
 }
 
+/**
+ * 주휴수당 산정 방식.
+ *
+ * 근로기준법 제55조는 1주 평균 1회 이상의 **유급**휴일을 정하고, 시행령 제30조는
+ * 그 주의 소정근로일을 개근한 사람에게 주도록 합니다. 다만 **실무에서 어떻게
+ * 지급하는지는 회사마다 다릅니다** — 월급에 이미 포함해 두는 곳, 시급직에게만
+ * 주 단위로 따로 계산해 붙이는 곳, 월 정액으로 주는 곳이 다 있습니다.
+ *
+ * 그래서 규칙은 하나로 두되 방식은 관리자가 고르게 합니다. 잘못 고르면 이중지급
+ * 아니면 미지급이 되므로, 화면에서 각 방식이 무엇을 뜻하는지 함께 설명합니다.
+ */
+export type WeeklyHolidayMethod = 'included' | 'calculated' | 'fixed';
+
+export interface WeeklyHolidayPolicy {
+  method: WeeklyHolidayMethod;
+  /**
+   * 이 급여방식에만 적용합니다.
+   *
+   * 월급제는 월 소정근로시간 209시간에 주휴시간이 이미 들어 있어, 여기에 또
+   * 붙이면 이중지급입니다. 그래서 기본값은 시급·일급제만입니다.
+   */
+  applyTo: PayMethod[];
+  /** 지급 대상 최소 주 소정근로시간. 근로기준법 제18조 제3항의 15시간. */
+  minWeeklyHours: number;
+  /** 그 주 소정근로일을 개근해야 지급 (시행령 제30조). 끄면 결근해도 지급합니다. */
+  requireFullAttendance: boolean;
+  /** 주 40시간 미만인 단시간 근로자에게 비례 계산할지. */
+  prorateForPartTime: boolean;
+  /** `fixed`일 때 매월 지급할 정액. */
+  fixedMonthlyAmount: number;
+}
+
+export type PayMethod = 'monthly' | 'annual' | 'hourly' | 'daily';
+
 export interface PayrollRateSet {
   year: number;
   /** 이 값들을 어디서 확인했는지 — 매년 갱신할 때 근거를 남깁니다. */
@@ -74,6 +108,12 @@ export interface PayrollRateSet {
    * 계산을 막지는 않습니다. 수습기간 감액처럼 예외가 있기 때문입니다.
    */
   minimumHourlyWage: number;
+  /**
+   * 주휴수당 — 고시값이 아니라 **회사 정책**입니다. 연도별 기준값에 함께 두는
+   * 이유는 계산 엔진이 받는 설정을 한 덩어리로 유지하기 위해서이고, 정책이
+   * 바뀐 해부터 적용된다는 점도 자연스럽게 표현됩니다.
+   */
+  weeklyHoliday: WeeklyHolidayPolicy;
 }
 
 /**
@@ -127,6 +167,17 @@ export const DEFAULT_RATE_SET: PayrollRateSet = {
   premiums: { overtime: 1.5, night: 0.5, holiday: 1.5 },
   // 고시값 대조 전입니다. 설정에서 해당 연도 값으로 반드시 바꾸세요.
   minimumHourlyWage: 10_320,
+
+  weeklyHoliday: {
+    // 기본값은 "월급에 포함, 시급직만 별도 산정"입니다. 국내 중소 제조업에서
+    // 가장 흔한 형태이지만, 회사 규정을 확인해 반드시 다시 고르세요.
+    method: 'calculated',
+    applyTo: ['hourly', 'daily'],
+    minWeeklyHours: 15,
+    requireFullAttendance: true,
+    prorateForPartTime: true,
+    fixedMonthlyAmount: 0,
+  },
 };
 
 /** 다음 해 기준값을 만들 때 쓰는 복사본. 숫자는 그대로, 연도와 메모만 바꿉니다. */

@@ -7,6 +7,7 @@ import { BrandingSettings } from '@/components/settings/branding-settings';
 import WorkScheduleSettings from '@/components/settings/work-schedule-settings';
 import LeavePolicySettings from '@/components/settings/leave-policy-settings';
 import PayrollSettings from '@/components/settings/payroll-settings';
+import PayrollRateSettings from '@/components/settings/payroll-rate-settings';
 import ApprovalSettings from '@/components/settings/approval-settings';
 import NotificationSettings from '@/components/settings/notification-settings';
 import SecuritySettings from '@/components/settings/security-settings';
@@ -35,6 +36,7 @@ export default function SettingsPage() {
           <TabsTrigger value="leave">휴가설정</TabsTrigger>
           <TabsTrigger value="workplace">사업장</TabsTrigger>
           <TabsTrigger value="payroll">급여설정</TabsTrigger>
+          <TabsTrigger value="payroll-rates">급여 기준값</TabsTrigger>
           <TabsTrigger value="approval">결재설정</TabsTrigger>
           <TabsTrigger value="notification">알림설정</TabsTrigger>
           <TabsTrigger value="menu-permission">메뉴권한</TabsTrigger>
@@ -67,6 +69,9 @@ export default function SettingsPage() {
         </TabsContent>
         <TabsContent value="payroll">
           <PayrollSettings />
+        </TabsContent>
+        <TabsContent value="payroll-rates">
+          <PayrollRateSettings />
         </TabsContent>
         <TabsContent value="approval">
           <ApprovalSettings />

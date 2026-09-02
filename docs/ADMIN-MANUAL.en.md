@@ -47,10 +47,18 @@ Keep Settings itself and the Audit log restricted to system administrators.
    night and holiday premiums, the late-arrival grace period.
 5. **Settings › Leave (휴가설정)** — accrual basis (hire date or fiscal year),
    whether half and quarter days are allowed, carry-over policy.
-6. **Settings › Payroll (급여설정)** — pay day, social-insurance rates, tax-free
-   allowance limits.
-7. **Settings › Holidays (공휴일설정)** — confirm this year's public holidays.
+6. **Settings › Payroll (급여설정)** — pay day.
+7. **Settings › Payroll rates (급여 기준값)** — kept per year: social-insurance
+   rates, tax-free allowance limits, the minimum wage, premium multipliers, and
+   the **weekly holiday allowance (주휴수당) method**.
+   → Practice differs from company to company. Check your own rules before
+   choosing; the wrong choice means either paying twice or not paying at all.
+   See under 3-2.
+8. **Settings › Holidays (공휴일설정)** — confirm this year's public holidays.
    These need renewing each year.
+   → Public holidays are paid days off, so they feed the weekly-holiday test and
+   the holiday-work premium directly. Miss one and work on that day is costed as
+   an ordinary weekday.
 
 ### 2-2. Load the staff data
 
@@ -113,6 +121,32 @@ history.
 > Service simplified tax table. Verify the withholding figures you file through
 > your existing process.
 
+> **Fill in attendance first if you have hourly staff.** For them the hours
+> worked *are* the base pay, so empty attendance pays zero. Step 2 warns about
+> anyone with no records for the month.
+
+#### Choosing the weekly holiday method (Settings › Payroll rates)
+
+Korean law (근로기준법 제55조) requires at least one paid day off per week, but
+leaves the payment mechanics to the employer.
+
+| Method | Suits |
+|--------|-------|
+| **Included in monthly pay** | Salary-only companies. The 209-hour month already contains the weekly-holiday hours, so nothing extra is paid. |
+| **Calculated** | Companies with hourly or daily staff. Attendance is read week by week; every week with full attendance on the scheduled days pays hourly rate × one day's hours. |
+| **Fixed monthly amount** | Companies whose rules set a flat figure regardless of attendance. |
+
+Supporting options — **which pay methods it applies to** (turning on monthly
+salary risks paying twice), **minimum weekly scheduled hours** (the 15 hours of
+제18조 제3항), **full attendance required** (시행령 제30조), and **pro-rate for
+part-time staff**.
+
+The payslip detail prints the formula alongside the amount, so you can show an
+employee exactly where the figure came from.
+
+The method lives inside the per-year rate set, so re-running an earlier month
+recalculates it under the method that applied then.
+
 ### 3-3. Approve leave
 
 **Leave › Pending approvals (승인 대기)**. Approving deducts the balance
@@ -165,7 +199,9 @@ records still reference them.
 | When | Task | Where |
 |------|------|-------|
 | Dec–Jan | Register next year's public holidays | Settings › Holidays |
-| January | Check and update social-insurance rates | Settings › Payroll |
+| January | Check and update social-insurance rates and the minimum wage | Settings › Payroll rates |
+| January | Create next year's rate set (starts as a copy of this year's) | Settings › Payroll rates › Create YYYY |
+| January | Re-confirm the weekly holiday method still matches your rules | Settings › Payroll rates |
 | January | Bulk-grant annual leave | Leave › Bulk grant |
 | Through the year | Unused-leave reminders | Leave › Promotion alerts |
 

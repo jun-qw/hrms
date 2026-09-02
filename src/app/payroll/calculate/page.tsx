@@ -5,12 +5,18 @@ import Link from 'next/link';
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useEmployeeDirectory, type DirectoryEmployee } from '@/lib/hooks/use-employee-directory';
 import { Breadcrumb } from '@/components/layout/breadcrumb';
-import { usePayrollStore, MONTHLY_WORK_HOURS } from '@/lib/stores/payroll-store';
+import { usePayrollStore } from '@/lib/stores/payroll-store';
+import { useSettingsStore } from '@/lib/stores/settings-store';
 import { useAttendanceStore } from '@/lib/stores/attendance-store';
 import { calculateInsurance } from '@/lib/utils/insurance';
 import { resolveRateSet, type ResolvedRateSet } from '@/lib/actions/payroll-rate-actions';
 import { DEFAULT_RATE_SET } from '@/lib/payroll/rate-set';
 import { fetchSalariesAsOf, type SalaryRecord } from '@/lib/actions/salary-actions';
+import {
+  computeWeeklyHoliday,
+  splitMonthIntoWeeks,
+  type WeekAttendance,
+} from '@/lib/payroll/weekly-holiday';
 import { calculateMonthlyIncomeTax } from '@/lib/utils/korean-tax';
 import PayrollItemSettings from '@/components/payroll/payroll-item-settings';
 import type { PayrollLineItem, SavedPayroll } from '@/types';
@@ -97,6 +103,8 @@ interface AttendanceSummary {
   holidayHours: number;
   /** 실제 기록된 근로시간 합계. 시급직 기본급의 근거입니다. */
   workedHours: number;
+  /** 주휴수당 판정용 주별 집계 */
+  weeks: WeekAttendance[];
 }
 
 interface EarningRow {
@@ -111,6 +119,16 @@ interface EarningRow {
   otherPay: number;
   total: number;
   confirmed: boolean;
+  /** 주휴수당. 산정 방식은 관리자 설정을 따릅니다. */
+  weeklyHolidayPay: number;
+  weeklyHolidayFormula: string;
+  /**
+   * 가산수당 계산에 실제로 쓰인 통상시급.
+   *
+   * 화면에서 기본급÷209로 되짚으면 시급직은 값이 어긋납니다 — 시급직의
+   * 기본급은 실근로시간의 곱이라 209로 나눠도 원래 시급이 나오지 않습니다.
+   */
+  hourlyWage: number;
 }
 
 interface DeductionRow {
@@ -157,6 +175,8 @@ export default function PayrollCalculatePage() {
   const savePayroll = usePayrollStore((s) => s.savePayroll);
   const updatePayrollStatus = usePayrollStore((s) => s.updatePayrollStatus);
   const employeePayrollSettings = usePayrollStore((s) => s.employeePayrollSettings);
+  // 공휴일은 주휴 판정의 소정근로일 계산에 필요합니다.
+  const holidays = useSettingsStore((s) => s.holidays);
   const attendanceRecords = useAttendanceStore((s) => s.records);
 
   const [currentStep, setCurrentStep] = useState(1);
@@ -335,6 +355,8 @@ export default function PayrollCalculatePage() {
   const buildAttendanceData = useCallback(() => {
     const map = new Map<string, AttendanceSummary>();
     const prefix = `${year}-${String(month).padStart(2, '0')}`;
+    const dateKeyOf = (day: number) => `${prefix}-${String(day).padStart(2, '0')}`;
+    const holidaySet = new Set(holidays.filter((h) => h.is_active).map((h) => h.date));
 
     for (const emp of selectedEmployees) {
       const records = attendanceRecords.filter(
@@ -357,13 +379,41 @@ export default function PayrollCalculatePage() {
         else if (r.status === 'absent') absent++;
         else if (r.status === 'leave' || r.status === 'half_day') leaveD++;
         ot += r.overtime_hours ?? 0;
-        hours += r.work_hours ?? 0;
-        if (r.status === 'holiday') holiday += r.work_hours ?? 0;
+
+        // 공휴일·주말에 찍힌 근무는 휴일근로(1.5배)입니다. 예전에는 상태가
+        // 'holiday'인 기록만 갈라내서, 추석에 나와 일한 날이 평일 근무처럼
+        // 기본급에 1.0배로 섞였습니다. 근태대장은 그 날을 근무일에서 빼는데
+        // 급여는 더해, 두 화면의 근무일수가 어긋나기도 했습니다.
+        const dow = new Date(r.date).getDay();
+        const onRestDay =
+          r.status === 'holiday' || dow === 0 || dow === 6 || holidaySet.has(r.date);
+        if (onRestDay) holiday += r.work_hours ?? 0;
+        else hours += r.work_hours ?? 0;
       }
+
+      // 주휴수당 판정용 주 단위 집계. 코드가 아니라 상태로 판단합니다.
+      const byDate = new Map(records.map((r) => [r.date, r]));
+      const weeks = splitMonthIntoWeeks(
+        Number(year),
+        Number(month),
+        (day) => holidaySet.has(dateKeyOf(day)),
+        (day) => {
+          const rec = byDate.get(dateKeyOf(day));
+          return {
+            worked: (rec?.work_hours ?? 0) > 0,
+            absent: rec?.status === 'absent',
+          };
+        },
+      );
 
       map.set(emp.id, {
         employeeId: emp.id,
-        workDays: records.filter((r) => (r.work_hours ?? 0) > 0).length,
+        weeks,
+        workDays: records.filter((r) => {
+          if ((r.work_hours ?? 0) <= 0) return false;
+          const dow = new Date(r.date).getDay();
+          return !(r.status === 'holiday' || dow === 0 || dow === 6 || holidaySet.has(r.date));
+        }).length,
         normal,
         late,
         earlyLeave,
@@ -376,7 +426,7 @@ export default function PayrollCalculatePage() {
       });
     }
     setAttendanceData(map);
-  }, [selectedEmployees, attendanceRecords, year, month]);
+  }, [selectedEmployees, attendanceRecords, year, month, holidays]);
 
   /** 근태가 한 건도 없는 사람 — 시급직이면 기본급이 0원이 되므로 반드시 짚어야 합니다. */
   const noAttendance = useMemo(
@@ -425,7 +475,17 @@ export default function PayrollCalculatePage() {
       const meal = nonTaxableLimits.meal;
       const transport = nonTaxableLimits.transport;
 
-      const total = baseSalary + meal + transport + positionAllowance + overtimePay + nightPay + holidayPay;
+      // 주휴수당 — 방식은 설정 > 급여 기준값에서 관리자가 고릅니다.
+      const weekly = computeWeeklyHoliday(
+        att?.weeks ?? [],
+        hourlyWage,
+        emp.pay_method,
+        rateSet.rates,
+      );
+      const weeklyHolidayPay = weekly.amount;
+
+      const total =
+        baseSalary + meal + transport + positionAllowance + overtimePay + nightPay + holidayPay + weeklyHolidayPay;
       map.set(emp.id, {
         employeeId: emp.id,
         baseSalary,
@@ -435,6 +495,9 @@ export default function PayrollCalculatePage() {
         overtimePay,
         nightPay,
         holidayPay,
+        weeklyHolidayPay,
+        weeklyHolidayFormula: weekly.formula,
+        hourlyWage,
         otherPay: 0,
         total,
         confirmed: false,
@@ -451,7 +514,7 @@ export default function PayrollCalculatePage() {
       const er = earningRows.get(emp.id);
       if (!er) continue;
       const taxableIncome =
-        er.baseSalary + er.positionAllowance + er.overtimePay + er.nightPay + er.holidayPay + er.otherPay;
+        er.baseSalary + er.positionAllowance + er.overtimePay + er.nightPay + er.holidayPay + er.weeklyHolidayPay + er.otherPay;
       const insurance = calculateInsurance(taxableIncome, rateSet.rates);
       const tax = calculateMonthlyIncomeTax(taxableIncome, dependents.get(emp.id) ?? 1, rateSet.rates);
       map.set(emp.id, {
@@ -558,6 +621,9 @@ export default function PayrollCalculatePage() {
       }
       if (row.earnings.holidayPay > 0) {
         items.push({ item_id: 'pi-holiday', name: '휴일근로수당', category: 'earning', amount: row.earnings.holidayPay, is_taxable: true, formula: `시급 x 1.5 x ${row.attendance.holidayHours}h` });
+      }
+      if (row.earnings.weeklyHolidayPay > 0) {
+        items.push({ item_id: 'pi-weeklyholiday', name: '주휴수당', category: 'earning', amount: row.earnings.weeklyHolidayPay, is_taxable: true, formula: row.earnings.weeklyHolidayFormula });
       }
       if (row.earnings.otherPay > 0) {
         items.push({ item_id: 'pi-other', name: '기타수당', category: 'earning', amount: row.earnings.otherPay, is_taxable: true, formula: `${fmtWon(row.earnings.otherPay)}` });
@@ -1179,6 +1245,7 @@ export default function PayrollCalculatePage() {
                         <TableHead className="text-right">연장수당</TableHead>
                         <TableHead className="text-right">야간수당</TableHead>
                         <TableHead className="text-right">휴일수당</TableHead>
+                        <TableHead className="text-right">주휴수당</TableHead>
                         <TableHead className="text-right">기타수당</TableHead>
                         <TableHead className="text-right">합계</TableHead>
                         <TableHead className="text-center">확인</TableHead>
@@ -1189,7 +1256,7 @@ export default function PayrollCalculatePage() {
                         const row = earningRows.get(emp.id);
                         if (!row) return null;
                         const att = attendanceData.get(emp.id);
-                        const hourlyWage = Math.round(row.baseSalary / MONTHLY_WORK_HOURS);
+                        const hourlyWage = row.hourlyWage;
                         return (
                           <TableRow key={emp.id} className={row.confirmed ? 'bg-green-50' : ''}>
                             <TableCell className="sticky left-0 bg-background z-10 font-medium">{emp.name}</TableCell>
@@ -1233,7 +1300,7 @@ export default function PayrollCalculatePage() {
                                   </div>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>{fmtNum(hourlyWage)}(시급) x 1.5 x {att?.overtimeHours ?? 0}h = {fmtWon(row.overtimePay)}</p>
+                                  <p>{fmtNum(hourlyWage)}(통상시급) x {rateSet.rates.premiums.overtime} x {att?.overtimeHours ?? 0}h = {fmtWon(row.overtimePay)}</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TableCell>
@@ -1251,7 +1318,7 @@ export default function PayrollCalculatePage() {
                                   </div>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>{fmtNum(hourlyWage)}(시급) x 0.5 x {att?.nightHours ?? 0}h = {fmtWon(row.nightPay)}</p>
+                                  <p>{fmtNum(hourlyWage)}(통상시급) x {rateSet.rates.premiums.night} x {att?.nightHours ?? 0}h = {fmtWon(row.nightPay)}</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TableCell>
@@ -1269,7 +1336,7 @@ export default function PayrollCalculatePage() {
                                   </div>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>{fmtNum(hourlyWage)}(시급) x 1.5 x {att?.holidayHours ?? 0}h = {fmtWon(row.holidayPay)}</p>
+                                  <p>{fmtNum(hourlyWage)}(통상시급) x {rateSet.rates.premiums.holiday} x {att?.holidayHours ?? 0}h = {fmtWon(row.holidayPay)}</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TableCell>
@@ -1510,7 +1577,7 @@ export default function PayrollCalculatePage() {
                         const er = earningRows.get(emp.id);
                         const dr = deductionRows.get(emp.id);
                         const att = attendanceData.get(emp.id);
-                        const hourlyWage = er ? Math.round(er.baseSalary / MONTHLY_WORK_HOURS) : 0;
+                        const hourlyWage = er?.hourlyWage ?? 0;
                         return (
                           <React.Fragment key={emp.id}>
                             <TableRow
@@ -1568,13 +1635,19 @@ export default function PayrollCalculatePage() {
                                       <div>+ 직책수당: {fmtWon(er.positionAllowance)}</div>
                                     )}
                                     {er.overtimePay > 0 && (
-                                      <div>+ 연장수당: {fmtNum(hourlyWage)} x 1.5 x {att.overtimeHours}h = {fmtWon(er.overtimePay)}</div>
+                                      <div>+ 연장수당: {fmtNum(hourlyWage)}(통상시급) x {rateSet.rates.premiums.overtime} x {att.overtimeHours}h = {fmtWon(er.overtimePay)}</div>
                                     )}
                                     {er.nightPay > 0 && (
-                                      <div>+ 야간수당: {fmtNum(hourlyWage)} x 0.5 x {att.nightHours}h = {fmtWon(er.nightPay)}</div>
+                                      <div>+ 야간수당: {fmtNum(hourlyWage)}(통상시급) x {rateSet.rates.premiums.night} x {att.nightHours}h = {fmtWon(er.nightPay)}</div>
                                     )}
                                     {er.holidayPay > 0 && (
-                                      <div>+ 휴일수당: {fmtNum(hourlyWage)} x 1.5 x {att.holidayHours}h = {fmtWon(er.holidayPay)}</div>
+                                      <div>+ 휴일수당: {fmtNum(hourlyWage)}(통상시급) x {rateSet.rates.premiums.holiday} x {att.holidayHours}h = {fmtWon(er.holidayPay)}</div>
+                                    )}
+                                    {er.weeklyHolidayPay > 0 && (
+                                      <div>
+                                        + 주휴수당: {fmtWon(er.weeklyHolidayPay)}
+                                        <span className="ml-1 opacity-70">({er.weeklyHolidayFormula})</span>
+                                      </div>
                                     )}
                                     {er.otherPay > 0 && (
                                       <div>+ 기타수당: {fmtWon(er.otherPay)}</div>

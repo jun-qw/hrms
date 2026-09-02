@@ -38,16 +38,15 @@ export default function PayrollSettings() {
     toast.success('급여 설정이 저장되었습니다.');
   };
 
-  const formatWon = (value: number) => {
-    return new Intl.NumberFormat('ko-KR').format(value);
-  };
-
   return (
     <div className="space-y-6">
-      {/* Card 1: 급여일 설정 */}
       <Card>
         <CardHeader>
           <CardTitle>급여일 설정</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            4대보험 요율·비과세 한도·주휴수당 방식은 <strong>급여 기준값</strong> 탭으로
+            옮겼습니다. 여기에 두면 화면의 숫자와 계산에 쓰이는 숫자가 갈라집니다.
+          </p>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
@@ -73,125 +72,6 @@ export default function PayrollSettings() {
         </CardContent>
       </Card>
 
-      {/* Card 2: 4대보험 요율 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>4대보험 요율</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="pension-rate">국민연금 요율 (%)</Label>
-              <Input
-                id="pension-rate"
-                type="number"
-                step={0.01}
-                value={form.national_pension_rate}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    national_pension_rate: Number(e.target.value),
-                  }))
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="health-rate">건강보험 요율 (%)</Label>
-              <Input
-                id="health-rate"
-                type="number"
-                step={0.001}
-                value={form.health_insurance_rate}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    health_insurance_rate: Number(e.target.value),
-                  }))
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="longterm-rate">장기요양보험 요율 (%)</Label>
-              <Input
-                id="longterm-rate"
-                type="number"
-                step={0.01}
-                value={form.long_term_care_rate}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    long_term_care_rate: Number(e.target.value),
-                  }))
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="employment-rate">고용보험 요율 (%)</Label>
-              <Input
-                id="employment-rate"
-                type="number"
-                step={0.01}
-                value={form.employment_insurance_rate}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    employment_insurance_rate: Number(e.target.value),
-                  }))
-                }
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Card 3: 비과세 한도 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>비과세 한도</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="meal-allowance">식대 한도 (원)</Label>
-              <div className="relative">
-                <Input
-                  id="meal-allowance"
-                  type="number"
-                  value={form.meal_allowance_limit}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      meal_allowance_limit: Number(e.target.value),
-                    }))
-                  }
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                  {formatWon(form.meal_allowance_limit / 10000)}만원
-                </span>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="transport-allowance">교통비 한도 (원)</Label>
-              <div className="relative">
-                <Input
-                  id="transport-allowance"
-                  type="number"
-                  value={form.transport_allowance_limit}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      transport_allowance_limit: Number(e.target.value),
-                    }))
-                  }
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                  {formatWon(form.transport_allowance_limit / 10000)}만원
-                </span>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Save button */}
       <div className="flex justify-end">

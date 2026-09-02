@@ -7,9 +7,10 @@
  * 모든 줄에 `formula` 문자열이 붙습니다. 담당자가 직원에게 "왜 이 금액인지"를
  * 설명할 수 없으면 시스템을 신뢰하지 않기 때문입니다.
  */
-import type { PayrollRateSet } from './rate-set';
+import type { PayMethod, PayrollRateSet } from './rate-set';
+import { computeWeeklyHoliday, type WeekAttendance } from './weekly-holiday';
 
-export type PayMethod = 'monthly' | 'annual' | 'hourly' | 'daily';
+export type { PayMethod };
 
 export interface PayrollLine {
   code: string;
@@ -30,6 +31,8 @@ export interface AttendanceInput {
   holidayHours: number;
   /** 시급·일급제에서 쓰는 실근로시간 */
   workedHours?: number;
+  /** 주휴수당 판정용 주별 집계. 비어 있으면 주휴수당을 계산하지 않습니다. */
+  weeks?: WeekAttendance[];
 }
 
 export interface EmployeeInput {
@@ -102,6 +105,22 @@ export function computePayroll(
   premium(att.overtimeHours, rates.premiums.overtime, 'OVT', '연장근로수당');
   premium(att.nightHours, rates.premiums.night, 'NGT', '야간근로수당');
   premium(att.holidayHours, rates.premiums.holiday, 'HOL', '휴일근로수당');
+
+  // ── 주휴수당 ──────────────────────────────────────────────────────────
+  // 방식은 회사 정책이라 기준값에서 옵니다. 월급제는 209시간에 이미 들어 있어
+  // 기본값에서 제외되어 있습니다 — 여기에 또 붙이면 이중지급입니다.
+  if (att.weeks && att.weeks.length > 0) {
+    const weekly = computeWeeklyHoliday(att.weeks, hourlyWage, input.payMethod, rates);
+    if (weekly.amount > 0) {
+      earnings.push({
+        code: 'WKH',
+        name: '주휴수당',
+        amount: weekly.amount,
+        taxable: true,
+        formula: weekly.formula,
+      });
+    }
+  }
 
   // ── 고정 수당 ─────────────────────────────────────────────────────────
   // 비과세 항목은 한도까지만 비과세로 두고, 초과분은 과세 줄로 갈라 놓습니다.
