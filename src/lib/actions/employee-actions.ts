@@ -57,6 +57,7 @@ import { encryptSensitive, maskStored } from '@/lib/security/sensitive';
 import { readScope, redactForScope } from './read-scope';
 import { recordAudit } from './audit';
 import { normalizePhone } from '@/lib/attendance/import-parse';
+import { setSalaries, type SalaryInput } from './salary-actions';
 import {
   createAssignment,
   fetchAssignments,
@@ -273,6 +274,26 @@ export async function updateEmployee(
         // 개인정보 사본이 되면 안 됩니다.
         details: { fields: Object.keys(patch) },
       });
+
+      // 사원카드에서 급여를 고치면 급여 **이력**에도 같은 날짜 구간으로
+      // 남깁니다. employees 의 금액 컬럼은 이력의 사본일 뿐이라, 여기만
+      // 고치면 다음에 급여 기준액 화면이 열리는 순간 syncCurrentSalaries 가
+      // 이력값으로 되돌립니다 — 담당자가 고친 값이 소리 없이 사라집니다.
+      if (patch.base_salary !== undefined || patch.hourly_wage !== undefined) {
+        const today = new Date();
+        const pad = (n: number) => String(n).padStart(2, '0');
+        const iso = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+        await setSalaries([
+          {
+            employeeId: id,
+            effectiveFrom: iso,
+            payMethod: (row.payMethod ?? 'monthly') as SalaryInput['payMethod'],
+            baseSalary: Number(row.baseSalary ?? 0),
+            hourlyWage: Number(row.hourlyWage ?? 0),
+            reason: '사원카드에서 수정',
+          },
+        ]);
+      }
     }
     return row ? withMaskedResident(toApp<Employee>(row)) : null;
   } catch (err) {

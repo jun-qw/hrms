@@ -15,9 +15,10 @@
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx scripts/seed.ts",
     "db:seed-demo": "tsx scripts/seed-demo.ts",
-    "build:scripts": "esbuild scripts/migrate.ts scripts/seed.ts scripts/seed-demo.ts --bundle --platform=node --target=node22 --format=cjs --outdir=dist/scripts --packages=bundle --external:@electric-sql/pglite --alias:@=./src --log-level=warning",
+    "build:scripts": "esbuild scripts/migrate.ts scripts/seed.ts scripts/seed-demo.ts scripts/import-data.ts --bundle --platform=node --target=node22 --format=cjs --outdir=dist/scripts --packages=bundle --external:@electric-sql/pglite --alias:@=./src --log-level=warning",
     "start:prod": "node scripts/start-standalone.mjs",
-    "verify": "node scripts/verify/run.mjs"
+    "verify": "node scripts/verify/run.mjs",
+    "db:export": "tsx scripts/export-data.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.7",
