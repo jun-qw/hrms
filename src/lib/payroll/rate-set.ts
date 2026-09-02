@@ -136,22 +136,87 @@ export interface PayrollRateSet {
  * 대조가 끝나면 `note`를 근거로 바꿔 적어 두면 다음 담당자가 압니다.
  */
 /**
- * 연도별 최저임금 고시액 (시간급).
+ * 연도별 고시값.
  *
- * 최저임금위원회가 매년 8월에 고시하는 값입니다. 담당자가 직접 넣은 값과
- * 대조해 보여 주기 위한 것이고, 자동으로 덮어쓰지는 않습니다 — 회사가
- * 수습기간 감액 같은 이유로 다른 값을 두었을 수 있고, 여기 적힌 값이 최신
- * 고시와 어긋날 수도 있기 때문입니다. 어긋나면 화면에서 양쪽을 나란히
- * 보여 주고 담당자가 정합니다.
+ * 담당자가 넣은 값과 대조해 보여 주기 위한 표입니다. **자동으로 덮어쓰지
+ * 않습니다** — 회사가 다른 값을 둘 이유가 있을 수 있고, 여기 적힌 값이 최신
+ * 고시와 어긋날 수도 있기 때문입니다. 어긋나면 화면에서 양쪽을 나란히 보여
+ * 주고 담당자가 정합니다.
+ *
+ * 요율은 모두 **근로자 부담분**입니다. 총 요율의 절반이며(고용보험 실업급여
+ * 제외), 사업주 부담분은 급여 계산에 들어가지 않습니다.
+ *
+ * 확인한 자료
+ * - 건강보험 7.19% (2026): 보건복지부 2025-08-28 제15차 건강보험정책심의위원회
+ *   보도자료 「2026년 건강보험료율 7.19%로 결정」 — 2025년 7.09% 대비 0.1%p 인상
+ * - 장기요양 13.14% (2026): 보건복지부 「2026년도 장기요양보험료율 0.9448%」.
+ *   소득 대비 0.9448% = 건강보험료 대비 13.14%
+ * - 국민연금 9.5% (2026): 2025년 연금개혁으로 1998년 이후 27년 만에 인상.
+ *   2026년부터 매년 0.5%p 올려 2033년 13% 도달
+ * - 최저임금: 최저임금위원회 연도별 고시
+ * - 기준소득월액 상·하한: 국민연금공단, 매년 7월 조정
  */
-export const STATUTORY_MINIMUM_WAGE: Record<number, number> = {
-  2021: 8_720,
-  2022: 9_160,
-  2023: 9_620,
-  2024: 9_860,
-  2025: 10_030,
-  2026: 10_320,
+export interface StatutoryRates {
+  /** 근로자 부담분 */
+  nationalPension: number;
+  healthInsurance: number;
+  /** 건강보험료 대비 비율 */
+  longTermCare: number;
+  employmentInsurance: number;
+  minimumHourlyWage: number;
+  /**
+   * 국민연금 기준소득월액 상·하한.
+   *
+   * **7월에 바뀝니다.** 연 단위 기준값 한 벌로는 반년씩 어긋나므로, 그 해
+   * 7월부터 적용되는 값을 적어 둡니다. 상반기 급여를 다시 돌릴 때는 직전 해
+   * 값을 써야 하고, 지금 구조로는 그것까지 담지 못합니다.
+   */
+  pensionMaxBase: number;
+  pensionMinBase: number;
+  /** 위 상·하한이 적용되기 시작하는 달 */
+  baseEffectiveFrom: string;
+}
+
+export const STATUTORY_RATES: Record<number, StatutoryRates> = {
+  2024: {
+    nationalPension: 0.045,
+    healthInsurance: 0.03545,
+    longTermCare: 0.1295,
+    employmentInsurance: 0.009,
+    minimumHourlyWage: 9_860,
+    pensionMaxBase: 6_170_000,
+    pensionMinBase: 390_000,
+    baseEffectiveFrom: '2024-07',
+  },
+  2025: {
+    nationalPension: 0.045,
+    healthInsurance: 0.03545,
+    longTermCare: 0.1295,
+    employmentInsurance: 0.009,
+    minimumHourlyWage: 10_030,
+    pensionMaxBase: 6_370_000,
+    pensionMinBase: 400_000,
+    baseEffectiveFrom: '2025-07',
+  },
+  2026: {
+    // 연금개혁 — 총 9% → 9.5%
+    nationalPension: 0.0475,
+    // 총 7.09% → 7.19%
+    healthInsurance: 0.03595,
+    // 건강보험료 대비 12.95% → 13.14%
+    longTermCare: 0.1314,
+    employmentInsurance: 0.009,
+    minimumHourlyWage: 10_320,
+    pensionMaxBase: 6_590_000,
+    pensionMinBase: 410_000,
+    baseEffectiveFrom: '2026-07',
+  },
 };
+
+/** 최저임금만 따로 쓰는 자리가 있어 남겨 둡니다. */
+export const STATUTORY_MINIMUM_WAGE: Record<number, number> = Object.fromEntries(
+  Object.entries(STATUTORY_RATES).map(([year, r]) => [Number(year), r.minimumHourlyWage]),
+);
 
 /** 월 환산액. 최저임금 고시와 같은 방식으로 209시간을 씁니다. */
 export function monthlyMinimumWage(hourly: number, monthlyHours = 209): number {
@@ -160,11 +225,15 @@ export function monthlyMinimumWage(hourly: number, monthlyHours = 209): number {
 
 export const DEFAULT_RATE_SET: PayrollRateSet = {
   year: 2026,
-  note: '개편 전 코드의 추정값을 이관했습니다. 고시값 대조 전입니다.',
+  note:
+    '4대보험 요율·최저임금·기준소득월액은 2026년 고시값입니다. ' +
+    '비과세 한도와 소득세 구간은 대조 전입니다.',
 
-  nationalPension: { rate: 0.045, maxBase: 5_900_000, minBase: 370_000 },
-  healthInsurance: { rate: 0.03545 },
-  longTermCare: { rate: 0.1295 },
+  // 아래 넷과 최저임금·기준소득월액은 STATUTORY_RATES[2026]과 같은 값입니다.
+  // 검증 스위트가 두 곳이 어긋나지 않는지 확인합니다.
+  nationalPension: { rate: 0.0475, maxBase: 6_590_000, minBase: 410_000 },
+  healthInsurance: { rate: 0.03595 },
+  longTermCare: { rate: 0.1314 },
   employmentInsurance: { rate: 0.009 },
 
   nonTaxableLimits: {

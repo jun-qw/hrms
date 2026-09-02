@@ -9,7 +9,7 @@ import '../lib/env';
 import { eq } from 'drizzle-orm';
 import { db, schema } from '../../src/lib/db';
 import {
-  DEFAULT_RATE_SET, STATUTORY_MINIMUM_WAGE, monthlyMinimumWage,
+  DEFAULT_RATE_SET, STATUTORY_MINIMUM_WAGE, STATUTORY_RATES, monthlyMinimumWage,
   copyRateSetForYear, type PayrollRateSet,
 } from '../../src/lib/payroll/rate-set';
 import { computePayroll } from '../../src/lib/payroll/engine';
@@ -99,6 +99,60 @@ async function main() {
   console.log('\n== 6. 미등록 연도 처리 ==');
   const missing = await loadYear(2099);
   check('등록하지 않은 해는 비어 있음', missing === null);
+
+
+  console.log('\n== 7. 고시값 전면 대조 ==');
+  for (const year of years) {
+    const set = await loadYear(year);
+    const official = STATUTORY_RATES[year];
+    if (!set || !official) { console.log(`  건너뜀 ${year} — 고시값 미등록`); continue; }
+    const rows: [string, number, number][] = [
+      ['국민연금', set.nationalPension.rate, official.nationalPension],
+      ['건강보험', set.healthInsurance.rate, official.healthInsurance],
+      ['장기요양', set.longTermCare.rate, official.longTermCare],
+      ['고용보험', set.employmentInsurance.rate, official.employmentInsurance],
+      ['최저임금', set.minimumHourlyWage, official.minimumHourlyWage],
+      ['기준소득 상한', set.nationalPension.maxBase, official.pensionMaxBase],
+      ['기준소득 하한', set.nationalPension.minBase, official.pensionMinBase],
+    ];
+    for (const [label, mine, want] of rows) {
+      check(`${year} ${label}`, Number(mine) === Number(want),
+        Number(mine) === Number(want) ? String(want) : `저장 ${mine} / 고시 ${want}`);
+    }
+  }
+
+  console.log('\n== 8. 고시값 자체의 앞뒤 ==');
+  // 표에 오타가 들어가면 전 직원의 공제액이 틀어집니다. 상식적인 범위와
+  // 연도별 방향만이라도 확인합니다.
+  const ys = Object.keys(STATUTORY_RATES).map(Number).sort();
+  for (const y of ys) {
+    const r = STATUTORY_RATES[y];
+    check(`${y} 요율이 상식적인 범위`,
+      r.nationalPension > 0.03 && r.nationalPension < 0.08 &&
+      r.healthInsurance > 0.02 && r.healthInsurance < 0.06 &&
+      r.longTermCare > 0.1 && r.longTermCare < 0.2 &&
+      r.employmentInsurance > 0.005 && r.employmentInsurance < 0.02);
+  }
+  for (let i = 1; i < ys.length; i++) {
+    const prev = STATUTORY_RATES[ys[i - 1]], cur = STATUTORY_RATES[ys[i]];
+    check(`${ys[i]} 최저임금이 전년 이상`, cur.minimumHourlyWage >= prev.minimumHourlyWage);
+    check(`${ys[i]} 기준소득 상한이 전년 이상`, cur.pensionMaxBase >= prev.pensionMaxBase);
+  }
+
+
+  console.log(`
+== 9. 기본값과 고시표가 어긋나지 않는가 ==`);
+  // 두 곳에 같은 숫자를 적어 두면 한쪽만 고치는 일이 반드시 생깁니다.
+  const d = DEFAULT_RATE_SET, o = STATUTORY_RATES[d.year];
+  if (o) {
+    check('기본값 국민연금 = 고시값', d.nationalPension.rate === o.nationalPension);
+    check('기본값 건강보험 = 고시값', d.healthInsurance.rate === o.healthInsurance);
+    check('기본값 장기요양 = 고시값', d.longTermCare.rate === o.longTermCare);
+    check('기본값 고용보험 = 고시값', d.employmentInsurance.rate === o.employmentInsurance);
+    check('기본값 최저임금 = 고시값', d.minimumHourlyWage === o.minimumHourlyWage);
+    check('기본값 기준소득 상한 = 고시값', d.nationalPension.maxBase === o.pensionMaxBase);
+    check('기본값 기준소득 하한 = 고시값', d.nationalPension.minBase === o.pensionMinBase);
+  }
 
   console.log(`\n결과: ${pass} 통과 · ${fail} 실패\n`);
   process.exit(fail === 0 ? 0 : 1);

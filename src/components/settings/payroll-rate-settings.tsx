@@ -20,6 +20,7 @@ import {
 import {
   DEFAULT_RATE_SET,
   STATUTORY_MINIMUM_WAGE,
+  STATUTORY_RATES,
   monthlyMinimumWage,
   type PayrollRateSet,
   type WeeklyHolidayMethod,
@@ -142,6 +143,49 @@ export default function PayrollRateSettings() {
       verified: true,
       verifiedAt: new Date().toISOString().slice(0, 10),
     });
+
+  /** 그 해 고시값. 없으면 대조 카드를 띄우지 않습니다. */
+  const statutoryRow = STATUTORY_RATES[year];
+
+  const pct = (v: number) => `${Number((v * 100).toFixed(4))}%`;
+  const won = (v: number) => `${v.toLocaleString('ko-KR')}원`;
+
+  /** 담당자가 넣은 값과 고시값이 어긋나는 항목. */
+  const diffs = statutoryRow
+    ? ([
+        ['국민연금', rates.nationalPension.rate, statutoryRow.nationalPension, pct],
+        ['건강보험', rates.healthInsurance.rate, statutoryRow.healthInsurance, pct],
+        ['장기요양 (건보료 대비)', rates.longTermCare.rate, statutoryRow.longTermCare, pct],
+        ['고용보험', rates.employmentInsurance.rate, statutoryRow.employmentInsurance, pct],
+        ['최저임금 (시급)', rates.minimumHourlyWage, statutoryRow.minimumHourlyWage, won],
+        ['기준소득월액 상한', rates.nationalPension.maxBase, statutoryRow.pensionMaxBase, won],
+        ['기준소득월액 하한', rates.nationalPension.minBase, statutoryRow.pensionMinBase, won],
+      ] as [string, number, number, (v: number) => string][])
+        .filter(([, mine, official]) => Number(mine) !== Number(official))
+        .map(([label, mine, official, fmt]) => ({
+          label,
+          shown: fmt(Number(mine)),
+          expected: fmt(Number(official)),
+        }))
+    : [];
+
+  /** 어긋난 항목을 한 번에 고시값으로 맞춥니다. */
+  const applyStatutory = () => {
+    if (!statutoryRow) return;
+    patch({
+      nationalPension: {
+        ...rates.nationalPension,
+        rate: statutoryRow.nationalPension,
+        maxBase: statutoryRow.pensionMaxBase,
+        minBase: statutoryRow.pensionMinBase,
+      },
+      healthInsurance: { rate: statutoryRow.healthInsurance },
+      longTermCare: { rate: statutoryRow.longTermCare },
+      employmentInsurance: { rate: statutoryRow.employmentInsurance },
+      minimumHourlyWage: statutoryRow.minimumHourlyWage,
+    });
+    toast.info('고시값을 채웠습니다. 확인 후 저장하세요.');
+  };
 
   /** 최저임금 고시액과 담당자가 넣은 값이 어긋나는가. */
   const statutory = STATUTORY_MINIMUM_WAGE[year];
@@ -269,6 +313,73 @@ export default function PayrollRateSettings() {
             고시값을 확인해 저장하세요.
           </span>
         </div>
+      )}
+
+      {/* ── 고시값 대조 ──
+          담당자가 넣은 값과 고시값을 나란히 놓습니다. 요율은 매년 바뀌는데
+          숫자만 봐서는 맞는지 알 수 없고, 틀리면 전 직원의 공제액이 틀립니다. */}
+      {statutoryRow && (
+        <Card className={cn(diffs.length > 0 && 'border-amber-300')}>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              {diffs.length === 0 ? (
+                <>
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                  {year}년 고시값과 일치합니다
+                </>
+              ) : (
+                <>
+                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                  {year}년 고시값과 {diffs.length}건 다릅니다
+                </>
+              )}
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              근로자 부담분 기준입니다. 고시값은 참고용이며 자동으로 덮어쓰지 않습니다 —
+              회사가 다르게 둘 이유가 있을 수 있습니다.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {diffs.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                국민연금 · 건강보험 · 장기요양 · 고용보험 · 최저임금 · 기준소득월액 상하한
+                모두 대조했습니다.
+              </p>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b text-muted-foreground">
+                        <th className="py-1.5 text-left font-medium">항목</th>
+                        <th className="py-1.5 text-right font-medium">현재 값</th>
+                        <th className="py-1.5 text-right font-medium">{year}년 고시값</th>
+                      </tr>
+                    </thead>
+                    <tbody className="tabular-nums">
+                      {diffs.map((d) => (
+                        <tr key={d.label} className="border-b last:border-0">
+                          <td className="py-1.5">{d.label}</td>
+                          <td className="py-1.5 text-right text-amber-700">{d.shown}</td>
+                          <td className="py-1.5 text-right font-semibold">{d.expected}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Button variant="outline" size="sm" onClick={applyStatutory}>
+                  고시값으로 맞추기 ({diffs.length}건)
+                </Button>
+              </>
+            )}
+            <p className="text-[11px] text-muted-foreground">
+              국민연금 기준소득월액 상·하한은 매년 <strong>7월</strong>에 바뀝니다
+              (여기 적힌 값은 {statutoryRow.baseEffectiveFrom} 적용분). 연 단위 기준값
+              한 벌로는 상반기와 하반기가 어긋나므로, 그 해 상반기 급여를 다시 돌릴
+              때는 직전 해 값을 확인하세요.
+            </p>
+          </CardContent>
+        </Card>
       )}
 
       {/* ── 주휴수당 (회사 정책) ── */}
@@ -454,8 +565,27 @@ export default function PayrollRateSettings() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">비과세 한도 · 가산율</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            한도 금액은 소득세법 제12조 제3호 기준입니다. 다만 <strong>한도 안이라고
+            무조건 비과세는 아닙니다</strong> — 아래 조건을 못 맞추면 과세 대상이고,
+            나중에 원천징수 정정 사유가 됩니다.
+          </p>
         </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <CardContent className="space-y-3">
+          <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-900">
+            <strong>식대</strong> — 급여 규정이나 근로계약서에 지급 기준이 적혀 있어야
+            하고, 회사가 식사를 현물로 따로 제공하면 비과세가 되지 않습니다.
+            <br />
+            <strong>교통비(자가운전보조금)</strong> — <strong>본인 소유 차량을 업무에
+            쓰고 실비를 따로 받지 않는 사람</strong>만 해당합니다. 지금 이 시스템은
+            전 직원에게 같은 한도를 적용하므로, 해당하지 않는 사람은 사원별 급여
+            설정에서 항목을 빼야 합니다.
+            <br />
+            <strong>출산·보육수당</strong> — 2026년 1월 1일 지급분부터 만 6세 이하
+            <strong> 자녀 1인당</strong> 월 20만원입니다(자녀 2명이면 40만원).
+            여기 한 칸으로는 자녀 수를 반영하지 못하므로 인원별로 확인하세요.
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="식대 (월)" value={rates.nonTaxableLimits.meal} onChange={(v) => patch({ nonTaxableLimits: { ...rates.nonTaxableLimits, meal: v } })} />
           <Field label="교통비 (월)" value={rates.nonTaxableLimits.transport} onChange={(v) => patch({ nonTaxableLimits: { ...rates.nonTaxableLimits, transport: v } })} />
           <Field label="출산·보육 (월)" value={rates.nonTaxableLimits.childcare} onChange={(v) => patch({ nonTaxableLimits: { ...rates.nonTaxableLimits, childcare: v } })} />
@@ -463,6 +593,7 @@ export default function PayrollRateSettings() {
           <Field label="연장 가산율" value={rates.premiums.overtime} onChange={(v) => patch({ premiums: { ...rates.premiums, overtime: v } })} step={0.1} />
           <Field label="야간 가산율" value={rates.premiums.night} onChange={(v) => patch({ premiums: { ...rates.premiums, night: v } })} step={0.1} />
           <Field label="휴일 가산율" value={rates.premiums.holiday} onChange={(v) => patch({ premiums: { ...rates.premiums, holiday: v } })} step={0.1} />
+          </div>
         </CardContent>
       </Card>
 

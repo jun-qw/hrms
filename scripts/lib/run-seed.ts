@@ -19,7 +19,7 @@ import {
 import { seedWorkflowTemplates } from '../../src/lib/demo-data/workflow-seed';
 import { defaultPayrollItems } from '../../src/lib/demo-data/payroll-seed';
 import { seedCodeGroups, seedCodeItems } from '../../src/lib/demo-data/code-seed';
-import { DEFAULT_RATE_SET, STATUTORY_MINIMUM_WAGE } from '../../src/lib/payroll/rate-set';
+import { DEFAULT_RATE_SET, STATUTORY_RATES } from '../../src/lib/payroll/rate-set';
 
 export async function runSeed() {
   const { db, close } = createDb();
@@ -244,21 +244,29 @@ export async function runSeed() {
   const rateSetCount = await db.select().from(schema.payrollRateSets);
   if (rateSetCount.length === 0) {
     for (const year of [2024, 2025, 2026]) {
-      const minimum = STATUTORY_MINIMUM_WAGE[year];
+      const official = STATUTORY_RATES[year];
       const rates = {
         ...DEFAULT_RATE_SET,
         year,
-        minimumHourlyWage: minimum ?? DEFAULT_RATE_SET.minimumHourlyWage,
+        nationalPension: {
+          rate: official.nationalPension,
+          maxBase: official.pensionMaxBase,
+          minBase: official.pensionMinBase,
+        },
+        healthInsurance: { rate: official.healthInsurance },
+        longTermCare: { rate: official.longTermCare },
+        employmentInsurance: { rate: official.employmentInsurance },
+        minimumHourlyWage: official.minimumHourlyWage,
         verified: false,
         verifiedAt: null,
         verifiedBy: null,
         note:
-          `최저임금은 ${year}년 고시액입니다. 4대보험 요율·비과세 한도는 ` +
-          '개편 전 코드의 추정값이라 고시값 대조가 필요합니다.',
+          `4대보험 요율·최저임금·기준소득월액은 ${year}년 고시값입니다. ` +
+          '비과세 한도와 소득세 구간은 대조 전입니다.',
       };
       await db.insert(schema.payrollRateSets).values({ year, rates, note: rates.note });
     }
-    console.log('Created payroll rate sets for 2024, 2025, 2026');
+    console.log('Created payroll rate sets for 2024, 2025, 2026 (고시값 반영)');
   }
 
   // --- Default settings sections (rates are tenant-adjustable) ---
