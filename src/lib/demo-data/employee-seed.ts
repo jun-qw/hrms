@@ -121,7 +121,7 @@ interface RosterRow {
 }
 
 const ROSTER: readonly RosterRow[] = [
-  { no: '미채번-김대형', name: '김대형', phone: '010-4666-8499', email: '1999hdk@daehan-at.co.kr', hire: '2026-01-01', dept: 'dept-00', rank: 'rank-10', title: 'title-6', jobClass: 'office', note: '' },
+  { no: 'DA10010001', name: '김대형', phone: '010-4666-8499', email: '1999hdk@daehan-at.co.kr', hire: '2026-01-01', dept: 'dept-00', rank: 'rank-10', title: 'title-6', jobClass: 'office', note: '' },
   { no: 'DA151102001', name: '장현표', phone: '010-3580-9522', email: 'sirokuma@daehan-at.co.kr', hire: '2015-11-02', dept: 'dept-00', rank: 'rank-09', title: 'title-1', jobClass: 'office', note: '' },
   { no: 'DA121101001', name: '김동현', phone: '010-7766-5516', email: 'skyland127@daehan-at.co.kr', hire: '2012-11-01', dept: 'dept-00', rank: 'rank-01', title: 'title-5', jobClass: 'office', note: '' },
   { no: 'DA201116001', name: '여치호', phone: '010-6202-0593', email: 'chiho.yeo2@daehan-at.co.kr', hire: '2020-11-16', dept: 'dept-02', rank: 'rank-05', title: 'title-1', jobClass: 'office', note: '' },
