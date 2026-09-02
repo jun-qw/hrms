@@ -81,7 +81,8 @@ export function CommandPalette() {
       });
     }
 
-    // Menu items
+    // 메뉴 — 하위 화면까지 넣습니다. 담당자는 "급여대장"으로 찾지
+    // "급여관리"로 찾지 않습니다.
     for (const menu of ALL_MENU_ITEMS) {
       result.push({
         id: `menu-${menu.href}`,
@@ -90,6 +91,15 @@ export function CommandPalette() {
         subtitle: t(menu.description),
         href: menu.href,
       });
+      for (const child of menu.children ?? []) {
+        result.push({
+          id: `menu-${child.href}`,
+          category: 'menu',
+          title: t(child.label),
+          subtitle: t(menu.label),
+          href: child.href,
+        });
+      }
     }
 
     return result;

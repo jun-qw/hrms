@@ -490,8 +490,8 @@ export const useSettingsStore = create<SettingsStore>()(
         menuPermissions: {
           admin: ALL_MENUS,
           hr_manager: ALL_MENUS.filter((m) => m !== '/audit-log' && m !== '/settings'),
-          dept_manager: ['/', '/my', '/organization', '/employees', '/attendance', '/leave', '/approval', '/issues'],
-          employee: ['/', '/my', '/attendance', '/leave', '/approval', '/issues'],
+          dept_manager: ['/', '/organization', '/employees', '/attendance'],
+          employee: ['/', '/attendance'],
         },
         branding: {
           app_name: 'HRMS',
