@@ -21,6 +21,9 @@ import {
   DEFAULT_RATE_SET,
   STATUTORY_MINIMUM_WAGE,
   STATUTORY_RATES,
+  STATUTORY_PENSION_BASE_INTERVALS,
+  pensionBaseAt,
+  type PensionBaseInterval,
   monthlyMinimumWage,
   type PayrollRateSet,
   type WeeklyHolidayMethod,
@@ -143,6 +146,19 @@ export default function PayrollRateSettings() {
       verified: true,
       verifiedAt: new Date().toISOString().slice(0, 10),
     });
+
+  /** 이 기준값이 들고 있는 구간. 없으면 고시 구간을 씁니다. */
+  const baseIntervals =
+    rates.nationalPension.baseIntervals ?? STATUTORY_PENSION_BASE_INTERVALS;
+
+  /** 그 해에서 이 구간이 덮는 달을 `1~6월` 처럼 적습니다. */
+  const monthsUsingInterval = (iv: PensionBaseInterval) => {
+    const months = Array.from({ length: 12 }, (_, i) => i + 1)
+      .filter((m) => pensionBaseAt(baseIntervals, year, m) === iv);
+    if (months.length === 0) return '—';
+    if (months.length === 12) return '전체';
+    return `${months[0]}~${months[months.length - 1]}월`;
+  };
 
   /** 그 해 고시값. 없으면 대조 카드를 띄우지 않습니다. */
   const statutoryRow = STATUTORY_RATES[year];
@@ -558,6 +574,64 @@ export default function PayrollRateSettings() {
           </div>
           <Field label="월 소정근로시간" value={rates.monthlyWorkHours} onChange={(v) => patch({ monthlyWorkHours: v })} />
           <Field label="1일 소정근로시간" value={rates.standardDailyHours} onChange={(v) => patch({ standardDailyHours: v })} step={0.5} />
+        </CardContent>
+      </Card>
+
+      {/* ── 국민연금 기준소득월액 구간 ──
+          이 값은 7월 1일에 바뀝니다. 한 해에 숫자 하나만 담으면 상반기와
+          하반기 중 한쪽이 반드시 틀립니다. */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">국민연금 기준소득월액 구간</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            상·하한은 <strong>7월 1일</strong>에 바뀝니다. 연도가 아니라 구간으로 두어,
+            같은 해라도 급여 달에 맞는 값이 쓰입니다. 급여계산이 그 달에 유효한 구간을
+            골라 씁니다.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b text-muted-foreground">
+                  <th className="py-1.5 text-left font-medium">적용 기간</th>
+                  <th className="py-1.5 text-right font-medium">상한</th>
+                  <th className="py-1.5 text-right font-medium">하한</th>
+                  <th className="py-1.5 text-right font-medium">이 해에 적용</th>
+                </tr>
+              </thead>
+              <tbody className="tabular-nums">
+                {baseIntervals.map((iv) => {
+                  // 그 해 1월과 12월 중 하나라도 이 구간에 들면 표시합니다.
+                  const usedThisYear =
+                    pensionBaseAt(baseIntervals, year, 1) === iv ||
+                    pensionBaseAt(baseIntervals, year, 12) === iv;
+                  return (
+                    <tr key={iv.effectiveFrom} className={cn('border-b last:border-0', usedThisYear && 'bg-primary/5')}>
+                      <td className="py-1.5">
+                        {iv.effectiveFrom} ~ {iv.effectiveTo ?? '현재'}
+                      </td>
+                      <td className="py-1.5 text-right">{iv.maxBase.toLocaleString('ko-KR')}원</td>
+                      <td className="py-1.5 text-right">{iv.minBase.toLocaleString('ko-KR')}원</td>
+                      <td className="py-1.5 text-right">
+                        {usedThisYear ? (
+                          <span className="font-medium text-primary">
+                            {monthsUsingInterval(iv)}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground/50">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            국민연금공단이 매년 3월경 결정해 7월부터 적용합니다. 고시된 구간이라 회사가
+            바꿀 값은 아니지만, 새 구간이 나오면 여기에 더해야 그 이후 급여가 맞습니다.
+          </p>
         </CardContent>
       </Card>
 

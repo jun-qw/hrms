@@ -10,6 +10,7 @@ import { eq } from 'drizzle-orm';
 import { db, schema } from '../../src/lib/db';
 import {
   DEFAULT_RATE_SET, STATUTORY_MINIMUM_WAGE, STATUTORY_RATES, monthlyMinimumWage,
+  STATUTORY_PENSION_BASE_INTERVALS, pensionBaseAt, rateSetForMonth,
   copyRateSetForYear, type PayrollRateSet,
 } from '../../src/lib/payroll/rate-set';
 import { computePayroll } from '../../src/lib/payroll/engine';
@@ -153,6 +154,66 @@ async function main() {
     check('기본값 기준소득 상한 = 고시값', d.nationalPension.maxBase === o.pensionMaxBase);
     check('기본값 기준소득 하한 = 고시값', d.nationalPension.minBase === o.pensionMinBase);
   }
+
+
+  console.log('\n== 10. 기준소득월액 유효일자 구간 ==');
+  const IV = STATUTORY_PENSION_BASE_INTERVALS;
+
+  // 구간이 겹치거나 비면 어떤 달은 값이 둘이거나 없습니다.
+  const sorted = [...IV].sort((a, b) => a.effectiveFrom.localeCompare(b.effectiveFrom));
+  // toISOString() 은 UTC 로 옮겨 적어 한국 시간대에서는 하루가 밀립니다.
+  // 날짜 문자열끼리 다루는 편이 안전합니다.
+  const nextDay = (iso: string) => {
+    const d = new Date(`${iso}T12:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + 1);
+    return d.toISOString().slice(0, 10);
+  };
+  let gapless = true, overlap = false;
+  for (let i = 0; i < sorted.length - 1; i++) {
+    const end = sorted[i].effectiveTo;
+    if (!end) { overlap = true; break; }
+    if (nextDay(end) !== sorted[i + 1].effectiveFrom) gapless = false;
+  }
+  check('구간이 겹치지 않음', !overlap);
+  check('구간 사이에 빈 날이 없음', gapless);
+  check('마지막 구간만 열려 있음',
+    sorted.filter((i) => i.effectiveTo === null).length === 1);
+
+  // 핵심 — 7월에 값이 바뀌는가.
+  const jun = pensionBaseAt(IV, 2026, 6);
+  const jul = pensionBaseAt(IV, 2026, 7);
+  check('2026년 6월 상한 = 6,370,000', jun?.maxBase === 6_370_000, String(jun?.maxBase));
+  check('2026년 7월 상한 = 6,590,000', jul?.maxBase === 6_590_000, String(jul?.maxBase));
+  check('6월과 7월의 상한이 다름', jun?.maxBase !== jul?.maxBase);
+  check('2025년 6월 상한 = 6,170,000', pensionBaseAt(IV, 2025, 6)?.maxBase === 6_170_000);
+  check('2025년 7월 상한 = 6,370,000', pensionBaseAt(IV, 2025, 7)?.maxBase === 6_370_000);
+
+  // 같은 해 기준값으로 6월과 7월 급여를 계산하면 달라야 합니다.
+  // 고액 연봉자라야 상한에 걸리므로 월 900만원으로 봅니다.
+  const set2026 = (await loadYear(2026)) ?? DEFAULT_RATE_SET;
+  const highEarner = (rates: PayrollRateSet) => computePayroll({
+    employeeId: 'e-high', name: '상한검증', payMethod: 'monthly',
+    baseAmount: 9_000_000, dependents: 1, allowances: [], deductions: [],
+    attendance: { scheduledDays: 22, workedDays: 22, overtimeHours: 0, nightHours: 0, holidayHours: 0 },
+    joinedMidMonth: null, leftMidMonth: null,
+  }, rates).deductions.find((d) => d.name === '국민연금')?.amount ?? 0;
+
+  const junPension = highEarner(rateSetForMonth(set2026, 2026, 6));
+  const julPension = highEarner(rateSetForMonth(set2026, 2026, 7));
+  check('6월 국민연금 = 6,370,000 × 4.75%',
+    junPension === Math.round(6_370_000 * 0.0475), `${junPension.toLocaleString()}원`);
+  check('7월 국민연금 = 6,590,000 × 4.75%',
+    julPension === Math.round(6_590_000 * 0.0475), `${julPension.toLocaleString()}원`);
+  check('7월이 6월보다 많음 — 구간이 실제로 계산을 바꿈',
+    julPension > junPension, `+${(julPension - junPension).toLocaleString()}원`);
+
+  // 구간이 없는 옛 자료는 예전처럼 동작해야 합니다.
+  const legacy: PayrollRateSet = {
+    ...DEFAULT_RATE_SET,
+    nationalPension: { rate: 0.0475, maxBase: 5_900_000, minBase: 370_000 },
+  };
+  check('구간이 없으면 기존 상·하한을 그대로 씀',
+    rateSetForMonth(legacy, 2026, 7).nationalPension.maxBase === 5_900_000);
 
   console.log(`\n결과: ${pass} 통과 · ${fail} 실패\n`);
   process.exit(fail === 0 ? 0 : 1);

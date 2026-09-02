@@ -10,6 +10,7 @@ import { useSettingsStore } from '@/lib/stores/settings-store';
 import { useAttendanceStore } from '@/lib/stores/attendance-store';
 import { calculateInsurance } from '@/lib/utils/insurance';
 import { resolveRateSet, type ResolvedRateSet } from '@/lib/actions/payroll-rate-actions';
+import { rateSetForMonth } from '@/lib/payroll/rate-set';
 import { DEFAULT_RATE_SET } from '@/lib/payroll/rate-set';
 import { fetchSalariesAsOf, type SalaryRecord } from '@/lib/actions/salary-actions';
 import {
@@ -211,6 +212,18 @@ export default function PayrollCalculatePage() {
       alive = false;
     };
   }, [year]);
+
+  /**
+   * 그 **달**에 맞춘 기준값.
+   *
+   * 국민연금 기준소득월액 상·하한은 7월 1일에 바뀝니다. 연 단위 기준값 하나로
+   * 계산하면 그 해 상반기와 하반기 중 한쪽이 반드시 틀립니다 — 2026년이라면
+   * 1~6월 637만원, 7~12월 659만원입니다.
+   */
+  const monthRates = useMemo(
+    () => rateSetForMonth(rateSet.rates, Number(year), Number(month)),
+    [rateSet, year, month],
+  );
 
   /**
    * 그 달에 유효했던 급여.
@@ -455,8 +468,8 @@ export default function PayrollCalculatePage() {
       const workedHours =
         att?.workedHours && att.workedHours > 0
           ? att.workedHours
-          : (att?.workDays ?? 0) * rateSet.rates.standardDailyHours;
-      const { baseSalary, hourlyWage } = computeBaseFor(emp, workedHours, att?.workDays ?? 0, rateSet.rates);
+          : (att?.workDays ?? 0) * monthRates.standardDailyHours;
+      const { baseSalary, hourlyWage } = computeBaseFor(emp, workedHours, att?.workDays ?? 0, monthRates);
 
       const empSettings = employeePayrollSettings.filter(
         (s) => s.employee_id === emp.id && s.is_active
@@ -468,7 +481,7 @@ export default function PayrollCalculatePage() {
       const nightHours = att?.nightHours ?? 0;
       const holidayHours = att?.holidayHours ?? 0;
 
-      const { premiums, nonTaxableLimits } = rateSet.rates;
+      const { premiums, nonTaxableLimits } = monthRates;
       const overtimePay = Math.round(hourlyWage * premiums.overtime * overtimeHours);
       const nightPay = Math.round(hourlyWage * premiums.night * nightHours);
       const holidayPay = Math.round(hourlyWage * premiums.holiday * holidayHours);
@@ -480,7 +493,7 @@ export default function PayrollCalculatePage() {
         att?.weeks ?? [],
         hourlyWage,
         emp.pay_method,
-        rateSet.rates,
+        monthRates,
       );
       const weeklyHolidayPay = weekly.amount;
 
@@ -515,8 +528,8 @@ export default function PayrollCalculatePage() {
       if (!er) continue;
       const taxableIncome =
         er.baseSalary + er.positionAllowance + er.overtimePay + er.nightPay + er.holidayPay + er.weeklyHolidayPay + er.otherPay;
-      const insurance = calculateInsurance(taxableIncome, rateSet.rates);
-      const tax = calculateMonthlyIncomeTax(taxableIncome, dependents.get(emp.id) ?? 1, rateSet.rates);
+      const insurance = calculateInsurance(taxableIncome, monthRates);
+      const tax = calculateMonthlyIncomeTax(taxableIncome, dependents.get(emp.id) ?? 1, monthRates);
       map.set(emp.id, {
         employeeId: emp.id,
         taxableIncome,
@@ -629,10 +642,10 @@ export default function PayrollCalculatePage() {
         items.push({ item_id: 'pi-other', name: '기타수당', category: 'earning', amount: row.earnings.otherPay, is_taxable: true, formula: `${fmtWon(row.earnings.otherPay)}` });
       }
       items.push(
-        { item_id: 'pi-pension', name: '국민연금', category: 'deduction', amount: row.deductions.nationalPension, is_taxable: false, formula: `과세소득 × ${pctText(rateSet.rates.nationalPension.rate)}` },
-        { item_id: 'pi-health', name: '건강보험', category: 'deduction', amount: row.deductions.healthInsurance, is_taxable: false, formula: `과세소득 × ${pctText(rateSet.rates.healthInsurance.rate)}` },
-        { item_id: 'pi-longterm', name: '장기요양보험', category: 'deduction', amount: row.deductions.longTermCare, is_taxable: false, formula: `건강보험 × ${pctText(rateSet.rates.longTermCare.rate)}` },
-        { item_id: 'pi-employment', name: '고용보험', category: 'deduction', amount: row.deductions.employmentInsurance, is_taxable: false, formula: `과세소득 × ${pctText(rateSet.rates.employmentInsurance.rate)}` },
+        { item_id: 'pi-pension', name: '국민연금', category: 'deduction', amount: row.deductions.nationalPension, is_taxable: false, formula: `과세소득 × ${pctText(monthRates.nationalPension.rate)}` },
+        { item_id: 'pi-health', name: '건강보험', category: 'deduction', amount: row.deductions.healthInsurance, is_taxable: false, formula: `과세소득 × ${pctText(monthRates.healthInsurance.rate)}` },
+        { item_id: 'pi-longterm', name: '장기요양보험', category: 'deduction', amount: row.deductions.longTermCare, is_taxable: false, formula: `건강보험 × ${pctText(monthRates.longTermCare.rate)}` },
+        { item_id: 'pi-employment', name: '고용보험', category: 'deduction', amount: row.deductions.employmentInsurance, is_taxable: false, formula: `과세소득 × ${pctText(monthRates.employmentInsurance.rate)}` },
         { item_id: 'pi-incometax', name: '소득세', category: 'deduction', amount: row.deductions.incomeTax, is_taxable: false, formula: `간이세액표 기반` },
         { item_id: 'pi-localtax', name: '지방소득세', category: 'deduction', amount: row.deductions.localTax, is_taxable: false, formula: `소득세 x 10%` }
       );
@@ -1321,7 +1334,7 @@ export default function PayrollCalculatePage() {
                                   </div>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>{fmtNum(hourlyWage)}(통상시급) x {rateSet.rates.premiums.overtime} x {att?.overtimeHours ?? 0}h = {fmtWon(row.overtimePay)}</p>
+                                  <p>{fmtNum(hourlyWage)}(통상시급) x {monthRates.premiums.overtime} x {att?.overtimeHours ?? 0}h = {fmtWon(row.overtimePay)}</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TableCell>
@@ -1339,7 +1352,7 @@ export default function PayrollCalculatePage() {
                                   </div>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>{fmtNum(hourlyWage)}(통상시급) x {rateSet.rates.premiums.night} x {att?.nightHours ?? 0}h = {fmtWon(row.nightPay)}</p>
+                                  <p>{fmtNum(hourlyWage)}(통상시급) x {monthRates.premiums.night} x {att?.nightHours ?? 0}h = {fmtWon(row.nightPay)}</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TableCell>
@@ -1357,7 +1370,7 @@ export default function PayrollCalculatePage() {
                                   </div>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>{fmtNum(hourlyWage)}(통상시급) x {rateSet.rates.premiums.holiday} x {att?.holidayHours ?? 0}h = {fmtWon(row.holidayPay)}</p>
+                                  <p>{fmtNum(hourlyWage)}(통상시급) x {monthRates.premiums.holiday} x {att?.holidayHours ?? 0}h = {fmtWon(row.holidayPay)}</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TableCell>
@@ -1456,7 +1469,7 @@ export default function PayrollCalculatePage() {
                                   <span className="font-mono text-sm cursor-help">{fmtNum(row.nationalPension)}</span>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>min(max({fmtNum(row.taxableIncome)}, {fmtNum(rateSet.rates.nationalPension.minBase)}), {fmtNum(rateSet.rates.nationalPension.maxBase)}) × {(rateSet.rates.nationalPension.rate * 100).toFixed(3).replace(/.?0+$/, '')}%</p>
+                                  <p>min(max({fmtNum(row.taxableIncome)}, {fmtNum(monthRates.nationalPension.minBase)}), {fmtNum(monthRates.nationalPension.maxBase)}) × {(monthRates.nationalPension.rate * 100).toFixed(3).replace(/.?0+$/, '')}%</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TableCell>
@@ -1466,7 +1479,7 @@ export default function PayrollCalculatePage() {
                                   <span className="font-mono text-sm cursor-help">{fmtNum(row.healthInsurance)}</span>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>{fmtNum(row.taxableIncome)} × {(rateSet.rates.healthInsurance.rate * 100).toFixed(3).replace(/.?0+$/, '')}%</p>
+                                  <p>{fmtNum(row.taxableIncome)} × {(monthRates.healthInsurance.rate * 100).toFixed(3).replace(/.?0+$/, '')}%</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TableCell>
@@ -1476,7 +1489,7 @@ export default function PayrollCalculatePage() {
                                   <span className="font-mono text-sm cursor-help">{fmtNum(row.longTermCare)}</span>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>{fmtNum(row.healthInsurance)}(건강보험) × {pctText(rateSet.rates.longTermCare.rate)}</p>
+                                  <p>{fmtNum(row.healthInsurance)}(건강보험) × {pctText(monthRates.longTermCare.rate)}</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TableCell>
@@ -1486,7 +1499,7 @@ export default function PayrollCalculatePage() {
                                   <span className="font-mono text-sm cursor-help">{fmtNum(row.employmentInsurance)}</span>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>{fmtNum(row.taxableIncome)} × {(rateSet.rates.employmentInsurance.rate * 100).toFixed(3).replace(/.?0+$/, '')}%</p>
+                                  <p>{fmtNum(row.taxableIncome)} × {(monthRates.employmentInsurance.rate * 100).toFixed(3).replace(/.?0+$/, '')}%</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TableCell>
@@ -1656,13 +1669,13 @@ export default function PayrollCalculatePage() {
                                       <div>+ 직책수당: {fmtWon(er.positionAllowance)}</div>
                                     )}
                                     {er.overtimePay > 0 && (
-                                      <div>+ 연장수당: {fmtNum(hourlyWage)}(통상시급) x {rateSet.rates.premiums.overtime} x {att.overtimeHours}h = {fmtWon(er.overtimePay)}</div>
+                                      <div>+ 연장수당: {fmtNum(hourlyWage)}(통상시급) x {monthRates.premiums.overtime} x {att.overtimeHours}h = {fmtWon(er.overtimePay)}</div>
                                     )}
                                     {er.nightPay > 0 && (
-                                      <div>+ 야간수당: {fmtNum(hourlyWage)}(통상시급) x {rateSet.rates.premiums.night} x {att.nightHours}h = {fmtWon(er.nightPay)}</div>
+                                      <div>+ 야간수당: {fmtNum(hourlyWage)}(통상시급) x {monthRates.premiums.night} x {att.nightHours}h = {fmtWon(er.nightPay)}</div>
                                     )}
                                     {er.holidayPay > 0 && (
-                                      <div>+ 휴일수당: {fmtNum(hourlyWage)}(통상시급) x {rateSet.rates.premiums.holiday} x {att.holidayHours}h = {fmtWon(er.holidayPay)}</div>
+                                      <div>+ 휴일수당: {fmtNum(hourlyWage)}(통상시급) x {monthRates.premiums.holiday} x {att.holidayHours}h = {fmtWon(er.holidayPay)}</div>
                                     )}
                                     {er.weeklyHolidayPay > 0 && (
                                       <div>
@@ -1675,10 +1688,10 @@ export default function PayrollCalculatePage() {
                                     )}
                                     <Separator className="my-2" />
                                     <div className="font-semibold">총 지급액: {fmtWon(row.totalEarnings)}</div>
-                                    <div className="mt-2">- 국민연금: {fmtWon(dr.nationalPension)} (min(max({fmtNum(dr.taxableIncome)}, {fmtNum(rateSet.rates.nationalPension.minBase)}), {fmtNum(rateSet.rates.nationalPension.maxBase)}) × {pctText(rateSet.rates.nationalPension.rate)})</div>
-                                    <div>- 건강보험: {fmtWon(dr.healthInsurance)} ({fmtNum(dr.taxableIncome)} × {pctText(rateSet.rates.healthInsurance.rate)})</div>
-                                    <div>- 장기요양: {fmtWon(dr.longTermCare)} ({fmtNum(dr.healthInsurance)} × {pctText(rateSet.rates.longTermCare.rate)})</div>
-                                    <div>- 고용보험: {fmtWon(dr.employmentInsurance)} ({fmtNum(dr.taxableIncome)} × {pctText(rateSet.rates.employmentInsurance.rate)})</div>
+                                    <div className="mt-2">- 국민연금: {fmtWon(dr.nationalPension)} (min(max({fmtNum(dr.taxableIncome)}, {fmtNum(monthRates.nationalPension.minBase)}), {fmtNum(monthRates.nationalPension.maxBase)}) × {pctText(monthRates.nationalPension.rate)})</div>
+                                    <div>- 건강보험: {fmtWon(dr.healthInsurance)} ({fmtNum(dr.taxableIncome)} × {pctText(monthRates.healthInsurance.rate)})</div>
+                                    <div>- 장기요양: {fmtWon(dr.longTermCare)} ({fmtNum(dr.healthInsurance)} × {pctText(monthRates.longTermCare.rate)})</div>
+                                    <div>- 고용보험: {fmtWon(dr.employmentInsurance)} ({fmtNum(dr.taxableIncome)} × {pctText(monthRates.employmentInsurance.rate)})</div>
                                     <div>- 소득세: {fmtWon(dr.incomeTax)} (간이세액표 기반)</div>
                                     <div>- 지방소득세: {fmtWon(dr.localTax)} ({fmtNum(dr.incomeTax)} x 10%)</div>
                                     {dr.otherDeduction > 0 && (

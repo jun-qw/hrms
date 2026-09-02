@@ -79,7 +79,23 @@ export interface PayrollRateSet {
   verifiedBy?: string | null;
 
   /** 근로자 부담분만 다룹니다. 사업주 부담분은 급여 계산에 들어가지 않습니다. */
-  nationalPension: { rate: number; maxBase: number; minBase: number };
+  nationalPension: {
+    rate: number;
+    /**
+     * 그 달에 유효한 상·하한. 아래 구간에서 뽑아 박아 넣은 값입니다 —
+     * 계산 엔진이 달을 모르기 때문에 부르는 쪽에서 평평하게 만들어 넘깁니다.
+     */
+    maxBase: number;
+    minBase: number;
+    /**
+     * 기준소득월액 상·하한 구간. 7월 1일에 바뀝니다.
+     *
+     * 예전에는 숫자 하나만 담아, 한 해 안에서도 상반기와 하반기 중 한쪽이
+     * 반드시 틀렸습니다. 비어 있으면 위 maxBase·minBase 를 그대로 씁니다
+     * (이 항목이 없던 시절에 저장된 자료).
+     */
+    baseIntervals?: PensionBaseInterval[];
+  };
   healthInsurance: { rate: number };
   /** 건강보험료에 곱합니다 (과세소득이 아니라). */
   longTermCare: { rate: number };
@@ -135,6 +151,78 @@ export interface PayrollRateSet {
  * 국민연금공단·건강보험공단·고용노동부·국세청 고시로 대조해 주세요.
  * 대조가 끝나면 `note`를 근거로 바꿔 적어 두면 다음 담당자가 압니다.
  */
+/**
+ * 국민연금 기준소득월액 상·하한 구간.
+ *
+ * 이 값은 **7월 1일에 바뀝니다.** 연 단위 기준값 한 벌에 숫자 하나만 담으면
+ * 그 해 상반기와 하반기 중 한쪽이 반드시 틀립니다. 2026년 급여를 예로 들면
+ * 1~6월은 637만원, 7~12월은 659만원이 맞는데, 하나만 담으면 여섯 달치
+ * 국민연금이 어긋납니다.
+ *
+ * 그래서 급여·소속 이력과 같은 **유효일자 구간**으로 둡니다. 구간은 겹치지
+ * 않고, 마지막 구간은 열려 있습니다.
+ */
+export interface PensionBaseInterval {
+  /** 적용 시작일 (YYYY-MM-DD). 보통 7월 1일입니다. */
+  effectiveFrom: string;
+  /** 적용 종료일. 다음 구간 시작 하루 전이며, 마지막 구간은 null입니다. */
+  effectiveTo: string | null;
+  maxBase: number;
+  minBase: number;
+}
+
+/**
+ * 고시된 구간. 국민연금공단이 매년 3월경 결정해 7월부터 적용합니다.
+ *
+ * 회사가 손댈 값이 아니지만, 기준값 안에 복사해 두어 그 해 급여가 그 해
+ * 구간으로 계산되게 합니다.
+ */
+export const STATUTORY_PENSION_BASE_INTERVALS: PensionBaseInterval[] = [
+  { effectiveFrom: '2023-07-01', effectiveTo: '2024-06-30', maxBase: 5_900_000, minBase: 370_000 },
+  { effectiveFrom: '2024-07-01', effectiveTo: '2025-06-30', maxBase: 6_170_000, minBase: 390_000 },
+  { effectiveFrom: '2025-07-01', effectiveTo: '2026-06-30', maxBase: 6_370_000, minBase: 400_000 },
+  { effectiveFrom: '2026-07-01', effectiveTo: null, maxBase: 6_590_000, minBase: 410_000 },
+];
+
+/** 그 달에 유효한 구간. 급여는 달 단위로 마감하므로 그 달 1일로 봅니다. */
+export function pensionBaseAt(
+  intervals: PensionBaseInterval[],
+  year: number,
+  month: number,
+): PensionBaseInterval | null {
+  const day = `${year}-${String(month).padStart(2, '0')}-01`;
+  return (
+    intervals.find(
+      (i) => i.effectiveFrom <= day && (i.effectiveTo === null || i.effectiveTo >= day),
+    ) ?? null
+  );
+}
+
+/**
+ * 그 달에 맞춰 기준값을 평평하게 만듭니다.
+ *
+ * 계산 엔진은 달을 모릅니다 — 순수 함수로 두려고 일부러 그렇게 했습니다.
+ * 대신 부르는 쪽에서 이 함수로 그 달의 상·하한을 박아 넘깁니다.
+ */
+export function rateSetForMonth(
+  rates: PayrollRateSet,
+  year: number,
+  month: number,
+): PayrollRateSet {
+  const intervals = rates.nationalPension.baseIntervals;
+  if (!intervals || intervals.length === 0) return rates;
+  const found = pensionBaseAt(intervals, year, month);
+  if (!found) return rates;
+  return {
+    ...rates,
+    nationalPension: {
+      ...rates.nationalPension,
+      maxBase: found.maxBase,
+      minBase: found.minBase,
+    },
+  };
+}
+
 /**
  * 연도별 고시값.
  *
@@ -231,7 +319,13 @@ export const DEFAULT_RATE_SET: PayrollRateSet = {
 
   // 아래 넷과 최저임금·기준소득월액은 STATUTORY_RATES[2026]과 같은 값입니다.
   // 검증 스위트가 두 곳이 어긋나지 않는지 확인합니다.
-  nationalPension: { rate: 0.0475, maxBase: 6_590_000, minBase: 410_000 },
+  nationalPension: {
+    rate: 0.0475,
+    // 아래 구간에서 뽑히는 값이지만, 구간이 없는 옛 자료를 위해 남겨 둡니다.
+    maxBase: 6_590_000,
+    minBase: 410_000,
+    baseIntervals: STATUTORY_PENSION_BASE_INTERVALS,
+  },
   healthInsurance: { rate: 0.03595 },
   longTermCare: { rate: 0.1314 },
   employmentInsurance: { rate: 0.009 },
@@ -294,5 +388,10 @@ export function copyRateSetForYear(source: PayrollRateSet, year: number): Payrol
     verified: false,
     verifiedAt: null,
     verifiedBy: null,
+    // 구간은 고시값이라 해가 바뀌어도 그대로 이어집니다.
+    nationalPension: {
+      ...source.nationalPension,
+      baseIntervals: source.nationalPension.baseIntervals ?? STATUTORY_PENSION_BASE_INTERVALS,
+    },
   };
 }
