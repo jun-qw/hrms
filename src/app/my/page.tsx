@@ -88,6 +88,7 @@ import {
   Bell,
   Calendar,
   Globe,
+  FolderOpen,
 } from 'lucide-react';
 import {
   BarChart,
@@ -100,6 +101,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import LeaveRequestForm from '@/components/leave/leave-request-form';
+import { EmployeeFilesTab } from '@/components/employee/employee-files-tab';
 import { toast } from 'sonner';
 
 // ---------------------------------------------------------------------------
@@ -1083,6 +1085,10 @@ export default function MyPage() {
             <FileCheck className="h-3.5 w-3.5" />
             전자결재
           </TabsTrigger>
+          <TabsTrigger value="files" className="gap-1">
+            <FolderOpen className="h-3.5 w-3.5" />
+            나의 파일
+          </TabsTrigger>
         </TabsList>
 
         {/* ============================================================== */}
@@ -2004,6 +2010,23 @@ export default function MyPage() {
             baseSalary={baseSalary}
             myId={MY_ID}
           />
+        </TabsContent>
+
+        {/* ============================================================== */}
+        {/* Tab: 나의 파일 — 사원카드의 파일 탭을 본인 것으로 그대로 씁니다. */}
+        {/* 서버 쪽 listEmployeeDocuments 가 본인 자료를 허용하므로 별도    */}
+        {/* 권한 처리가 필요 없습니다.                                      */}
+        {/* ============================================================== */}
+        <TabsContent value="files">
+          {MY_ID ? (
+            <EmployeeFilesTab employeeId={MY_ID} />
+          ) : (
+            <Card>
+              <CardContent className="py-10 text-center text-sm text-muted-foreground">
+                계정에 연결된 사원 정보가 없어 파일을 보여줄 수 없습니다.
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* ============================================================== */}

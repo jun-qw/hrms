@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ALL_MENU_ITEMS, DEFAULT_MENU_HREFS } from '@/lib/constants/menu-items';
+import { ALL_MENU_ITEMS, canOpenPath } from '@/lib/constants/menu-items';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { useT } from '@/lib/i18n/use-translation';
@@ -30,8 +30,8 @@ export function Sidebar() {
 
   const { t } = useT();
   const role = session?.role ?? 'employee';
-  const allowedHrefs = menuPermissions?.[role] ?? DEFAULT_MENU_HREFS;
-  const isHr = role === 'admin' || role === 'hr_manager';
+  const allowed = menuPermissions?.[role];
+  const may = (href: string) => canOpenPath(role, allowed, href);
 
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-60 border-r bg-card">
@@ -42,7 +42,9 @@ export function Sidebar() {
       </div>
       <ScrollArea className="h-[calc(100vh-3.5rem)]">
         <nav className="space-y-0.5 p-3">
-          {ALL_MENU_ITEMS.filter((item) => allowedHrefs.includes(item.href)).map((item) => {
+          {ALL_MENU_ITEMS.filter(
+            (item) => may(item.href) || (item.children ?? []).some((c) => may(c.href)),
+          ).map((item) => {
             // 홈은 정확히 일치할 때만 켭니다. 아니면 모든 경로에서 켜집니다.
             const inSection =
               item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
@@ -50,13 +52,16 @@ export function Sidebar() {
             // (예: 연차대장은 /leave, 근태·휴가 메뉴는 /attendance).
             const onChild = item.children?.some((c) => pathname.startsWith(c.href)) ?? false;
             const open = inSection || onChild;
-            // 대장은 인사 담당 화면이라 일반 직원에게는 목록에서도 뺍니다.
-            const visibleChildren = (item.children ?? []).filter((c) => isHr || !c.hrOnly);
+            // 권한 있는 화면만 보여 줍니다. 눌러도 튕길 항목을 목록에 두면
+            // 사용자는 고장으로 읽습니다.
+            const visibleChildren = (item.children ?? []).filter((c) => may(c.href));
+            // 상위 화면 권한이 없으면 첫 하위 화면으로 갑니다.
+            const parentHref = may(item.href) ? item.href : (visibleChildren[0]?.href ?? item.href);
 
             return (
               <div key={item.href}>
                 <Link
-                  href={item.href}
+                  href={parentHref}
                   className={cn(
                     'flex items-center gap-2.5 rounded-md px-2 py-[7px] text-[13px] transition-colors',
                     pathname === item.href

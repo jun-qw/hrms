@@ -4,10 +4,9 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
-import { coveredBasePaths, isHrOnlyPath } from '@/lib/constants/menu-items';
+import { canOpenPath } from '@/lib/constants/menu-items';
 
 const PUBLIC_PATHS = ['/login'];
-const HR_ROLES = ['admin', 'hr_manager'];
 
 /**
  * Screens any signed-in employee may open even without the parent module's
@@ -58,16 +57,15 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     // 권한은 메뉴 단위로 주지만, 하위 화면이 다른 경로에 있을 수 있습니다 —
     // 연차대장은 /leave 인데 메뉴는 근태·휴가(/attendance) 아래입니다. 메뉴
     // 목록만 대조하면 사이드바에는 보이는데 누르면 홈으로 튕깁니다.
-    const allowed = coveredBasePaths(menuPermissions?.[session.role] ?? []);
-    const base = '/' + (pathname.split('/')[1] ?? '');
-    if (base !== '/' && !allowed.has(base)) {
-      router.replace('/');
-      return;
-    }
-    // 대장은 전 직원을 한 화면에 놓고 다루는 관리 도구입니다. 자료는 이미
-    // 서버에서 본인 것만 내려오지만, 화면 자체를 열 이유가 없습니다.
-    if (!HR_ROLES.includes(session.role) && isHrOnlyPath(pathname)) {
-      router.replace('/');
+    // 권한은 화면 단위입니다. 시스템관리자는 항상 전부, 나머지는
+    // 설정 > 메뉴권한에서 열어 준 화면만 봅니다.
+    if (!canOpenPath(session.role, menuPermissions?.[session.role], pathname)) {
+      // 홈조차 권한에 없는 역할(기본값의 일반사원)은 마이페이지로 보냅니다.
+      // '/' 로 보내면 그 자리에서 또 걸려 무한히 튕깁니다.
+      const fallback = canOpenPath(session.role, menuPermissions?.[session.role], '/')
+        ? '/'
+        : '/my';
+      if (pathname !== fallback) router.replace(fallback);
     }
   }, [hydrated, session, pathname, router, menuPermissions, permissionsLoaded]);
 

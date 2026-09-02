@@ -23,7 +23,7 @@ import type {
   UserRole,
 } from '@/types';
 import type { Locale } from '@/lib/i18n/types';
-import { DEFAULT_MENU_HREFS } from '@/lib/constants/menu-items';
+import { defaultScreensForRole } from '@/lib/constants/menu-items';
 
 // ---- Display & Print Template types ----
 
@@ -271,13 +271,6 @@ interface HasId {
 
 // ---- Neutral defaults (used before hydration / on a fresh install) ----
 
-/**
- * Unfinished modules are excluded, so a fresh installation never shows a menu
- * that leads to a half-built screen. An administrator can switch them on in
- * 설정 > 메뉴권한 once they are wanted.
- */
-const ALL_MENUS = DEFAULT_MENU_HREFS;
-
 export const useSettingsStore = create<SettingsStore>()(
   persist(
     (set, get) => {
@@ -487,11 +480,13 @@ export const useSettingsStore = create<SettingsStore>()(
           number_format: 'comma',
           locale: 'en',
         },
+        // 화면 단위 권한. 시스템관리자·인사담당자는 전부, 그 외에는
+        // 마이페이지만이 기본입니다 — 필요한 화면은 메뉴권한에서 열어 줍니다.
         menuPermissions: {
-          admin: ALL_MENUS,
-          hr_manager: ALL_MENUS.filter((m) => m !== '/audit-log' && m !== '/settings'),
-          dept_manager: ['/', '/organization', '/employees', '/attendance'],
-          employee: ['/', '/attendance'],
+          admin: defaultScreensForRole('admin'),
+          hr_manager: defaultScreensForRole('hr_manager'),
+          dept_manager: defaultScreensForRole('dept_manager'),
+          employee: defaultScreensForRole('employee'),
         },
         branding: {
           app_name: 'HRMS',

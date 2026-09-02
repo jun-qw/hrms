@@ -201,3 +201,110 @@ export function coveredBasePaths(allowedMenuHrefs: string[]): Set<string> {
   }
   return out;
 }
+
+/**
+ * 권한을 걸 수 있는 화면 전체.
+ *
+ * 권한은 메뉴가 아니라 **화면 단위**로 겁니다. 메뉴 단위로 걸면 "급여관리는
+ * 주되 급여 기준액은 막는다" 같은 흔한 요구를 담지 못합니다.
+ *
+ * 메뉴에서 뺀 화면(결재함·전자결재)도 여기 있어야 합니다 — 메뉴에 없다고
+ * 주소로 못 들어가는 것이 아니기 때문입니다.
+ */
+export interface PermissionScreen {
+  href: string;
+  label: TranslationKey | string;
+  /** 묶어 보여줄 상위 메뉴 라벨 */
+  group: TranslationKey;
+  /**
+   * 기본값에서 관리자 외 역할에 열어 줄 화면.
+   *
+   * 마이페이지 하나입니다 — 관리자 이외에는 마이페이지만 보는 것이 기본이고,
+   * 그 밖의 화면은 설정 > 메뉴권한에서 역할별로 열어 줍니다.
+   */
+  defaultForEveryone?: boolean;
+}
+
+export const PERMISSION_SCREENS: PermissionScreen[] = [
+  { href: '/', label: 'menu.home', group: 'menuGroup.home' },
+  { href: '/my', label: 'menu.myPage', group: 'menuGroup.home', defaultForEveryone: true },
+  { href: '/approval', label: '결재함', group: 'menuGroup.home' },
+
+  { href: '/employees', label: 'menu.workforce', group: 'menuGroup.workforce' },
+  { href: '/employees/roster', label: 'menu.roster', group: 'menuGroup.workforce' },
+  { href: '/employees/pipeline', label: 'menu.pipeline', group: 'menuGroup.workforce' },
+  { href: '/appointments', label: 'menu.appointments', group: 'menuGroup.workforce' },
+  { href: '/employees/retirement', label: 'menu.retirement', group: 'menuGroup.workforce' },
+
+  { href: '/organization', label: 'menu.organization', group: 'menuGroup.organization' },
+  { href: '/employees/workplace-assignment', label: 'menu.workplaceAssignment', group: 'menuGroup.organization' },
+
+  { href: '/attendance', label: 'menu.timeAndLeave', group: 'menuGroup.timeAndLeave' },
+  { href: '/attendance/register', label: 'menu.attendanceRegister', group: 'menuGroup.timeAndLeave' },
+  { href: '/attendance/import', label: 'menu.attendanceImport', group: 'menuGroup.timeAndLeave' },
+  { href: '/leave/register', label: 'menu.leaveRegister', group: 'menuGroup.timeAndLeave' },
+  { href: '/leave', label: 'menu.leaveRequests', group: 'menuGroup.timeAndLeave' },
+  { href: '/attendance/admin', label: 'menu.attendanceCloseout', group: 'menuGroup.timeAndLeave' },
+
+  { href: '/payroll', label: 'menu.payroll', group: 'menuGroup.payroll' },
+  { href: '/payroll/salaries', label: 'menu.salaryBase', group: 'menuGroup.payroll' },
+  { href: '/payroll/calculate', label: 'menu.payrollCalculate', group: 'menuGroup.payroll' },
+  { href: '/payroll/dashboard', label: 'menu.payrollRegister', group: 'menuGroup.payroll' },
+  { href: '/payroll/severance', label: 'menu.severance', group: 'menuGroup.payroll' },
+  { href: '/payroll/year-end-tax', label: 'menu.yearEndTax', group: 'menuGroup.payroll' },
+
+  { href: '/settings', label: 'menu.settings', group: 'menuGroup.system' },
+  { href: '/audit-log', label: 'menu.auditLog', group: 'menuGroup.system' },
+  { href: '/workflows', label: '프로세스 현황', group: 'menuGroup.system' },
+];
+
+/** 관리자 외 역할의 기본 권한 — 마이페이지 하나. */
+export const DEFAULT_NON_ADMIN_SCREENS: string[] = PERMISSION_SCREENS.filter(
+  (s) => s.defaultForEveryone,
+).map((s) => s.href);
+
+/**
+ * 역할별 기본 화면.
+ *
+ * - 시스템관리자: 전부, 설정에서도 줄일 수 없습니다. 권한을 고칠 사람마저
+ *   잠기면 아무도 풀 수 없습니다.
+ * - 인사담당자: 기본은 전부지만 설정에서 조정할 수 있습니다.
+ * - 부서관리자·일반사원: 마이페이지만. 필요한 화면은 설정 > 메뉴권한에서
+ *   역할별로 열어 줍니다.
+ */
+export function defaultScreensForRole(role: string): string[] {
+  if (role === 'admin' || role === 'hr_manager') {
+    return PERMISSION_SCREENS.map((s) => s.href);
+  }
+  return DEFAULT_NON_ADMIN_SCREENS;
+}
+
+/**
+ * 이 경로가 어느 화면에 속하는가 — 가장 긴 접두사가 이깁니다.
+ *
+ * \`/payroll/salaries\` 는 급여 기준액 화면이고, \`/payroll/payslip/123\` 처럼
+ * 화면 목록에 없는 하위 경로는 가장 가까운 상위 화면(\`/payroll\`)을 따릅니다.
+ */
+export function screenForPath(pathname: string): PermissionScreen | null {
+  let best: PermissionScreen | null = null;
+  for (const screen of PERMISSION_SCREENS) {
+    const hit =
+      pathname === screen.href ||
+      (screen.href !== '/' && pathname.startsWith(`${screen.href}/`));
+    if (hit && (!best || screen.href.length > best.href.length)) best = screen;
+  }
+  if (!best && pathname === '/') best = PERMISSION_SCREENS[0];
+  return best;
+}
+
+/** 이 역할이 이 경로를 열 수 있는가. 시스템관리자는 항상 엽니다. */
+export function canOpenPath(
+  role: string,
+  allowed: string[] | undefined,
+  pathname: string,
+): boolean {
+  if (role === 'admin') return true;
+  const screen = screenForPath(pathname);
+  if (!screen) return true; // 목록에 없는 경로(로그인 등)는 여기서 막지 않습니다.
+  return (allowed ?? defaultScreensForRole(role)).includes(screen.href);
+}
