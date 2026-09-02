@@ -17,7 +17,7 @@ if (existsSync(lock)) {
   rmSync(lock);
 }
 
-const suites = ['p7-security.ts', 'p7-data.ts', 'p7-perf.ts'];
+const suites = ['p7-security.ts', 'p7-data.ts', 'p7-perf.ts', 'p8-rates.ts'];
 let failed = 0;
 
 for (const suite of suites) {

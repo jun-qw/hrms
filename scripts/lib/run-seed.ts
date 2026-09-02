@@ -19,7 +19,7 @@ import {
 import { seedWorkflowTemplates } from '../../src/lib/demo-data/workflow-seed';
 import { defaultPayrollItems } from '../../src/lib/demo-data/payroll-seed';
 import { seedCodeGroups, seedCodeItems } from '../../src/lib/demo-data/code-seed';
-import { DEFAULT_RATE_SET } from '../../src/lib/payroll/rate-set';
+import { DEFAULT_RATE_SET, STATUTORY_MINIMUM_WAGE } from '../../src/lib/payroll/rate-set';
 
 export async function runSeed() {
   const { db, close } = createDb();
@@ -236,14 +236,29 @@ export async function runSeed() {
   // --- 연도별 급여 기준값 ---
   // 요율·비과세 한도·세율 구간을 데이터로 넣습니다. 값 자체는 확정 고시값이
   // 아니므로, 운영 투입 전에 설정 화면에서 대조해야 합니다.
+  //
+  // 최근 몇 해를 함께 넣는 이유는 두 가지입니다. 과거 급여를 다시 돌릴 때 그
+  // 해의 요율이 있어야 하고, 담당자가 "연도별로 관리된다"는 것을 화면에서
+  // 바로 보게 되기 때문입니다. 최저임금만 해당 연도 고시액으로 채우고
+  // 나머지는 기본값을 이어 씁니다 — 지어낸 요율을 확정값처럼 넣지 않습니다.
   const rateSetCount = await db.select().from(schema.payrollRateSets);
   if (rateSetCount.length === 0) {
-    await db.insert(schema.payrollRateSets).values({
-      year: DEFAULT_RATE_SET.year,
-      rates: DEFAULT_RATE_SET,
-      note: DEFAULT_RATE_SET.note,
-    });
-    console.log(`Created payroll rate set for ${DEFAULT_RATE_SET.year}`);
+    for (const year of [2024, 2025, 2026]) {
+      const minimum = STATUTORY_MINIMUM_WAGE[year];
+      const rates = {
+        ...DEFAULT_RATE_SET,
+        year,
+        minimumHourlyWage: minimum ?? DEFAULT_RATE_SET.minimumHourlyWage,
+        verified: false,
+        verifiedAt: null,
+        verifiedBy: null,
+        note:
+          `최저임금은 ${year}년 고시액입니다. 4대보험 요율·비과세 한도는 ` +
+          '개편 전 코드의 추정값이라 고시값 대조가 필요합니다.',
+      };
+      await db.insert(schema.payrollRateSets).values({ year, rates, note: rates.note });
+    }
+    console.log('Created payroll rate sets for 2024, 2025, 2026');
   }
 
   // --- Default settings sections (rates are tenant-adjustable) ---

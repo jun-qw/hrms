@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { AlertTriangle, Loader2, Plus } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Loader2, Plus, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,11 +12,15 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import {
   createNextYearRateSet,
+  deleteRateSet,
+  fetchRateSets,
   resolveRateSet,
   saveRateSet,
 } from '@/lib/actions/payroll-rate-actions';
 import {
   DEFAULT_RATE_SET,
+  STATUTORY_MINIMUM_WAGE,
+  monthlyMinimumWage,
   type PayrollRateSet,
   type WeeklyHolidayMethod,
 } from '@/lib/payroll/rate-set';
@@ -61,16 +65,27 @@ export default function PayrollRateSettings() {
   const [fromYear, setFromYear] = useState<number | undefined>();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  /** 등록된 연도들. 자유 입력만 두면 몇 년치가 들어 있는지 알 수 없습니다. */
+  const [years, setYears] = useState<number[]>([]);
+  /** 직전 해 값 — 무엇이 바뀌었는지 나란히 보여 주기 위해 함께 읽습니다. */
+  const [previous, setPrevious] = useState<PayrollRateSet | null>(null);
+
+  const reloadYears = () => {
+    void fetchRateSets().then((list) => setYears(list.map((r) => r.year).sort((a, b) => b - a)));
+  };
+  useEffect(reloadYears, []);
 
   useEffect(() => {
     let alive = true;
     setLoading(true);
-    resolveRateSet(year)
-      .then((r) => {
+    Promise.all([resolveRateSet(year), resolveRateSet(year - 1)])
+      .then(([current, prior]) => {
         if (!alive) return;
-        setRates(r.rates);
-        setSource(r.source);
-        setFromYear(r.fromYear);
+        setRates(current.rates);
+        setSource(current.source);
+        setFromYear(current.fromYear);
+        // 직전 해에 등록된 값이 없으면 비교 대상이 없습니다.
+        setPrevious(prior.source === 'exact' ? prior.rates : null);
       })
       .finally(() => alive && setLoading(false));
     return () => {
@@ -89,6 +104,7 @@ export default function PayrollRateSettings() {
       if (ok) {
         setSource('exact');
         setFromYear(undefined);
+        reloadYears();
         toast.success(`${year}년 급여 기준값을 저장했습니다.`);
       } else {
         toast.error('저장하지 못했습니다.');
@@ -106,46 +122,143 @@ export default function PayrollRateSettings() {
       return;
     }
     setYear(next);
+    reloadYears();
     toast.success(`${next}년 기준값을 ${year}년 값에서 복사했습니다. 고시값으로 대조하세요.`);
   };
+
+  const handleDelete = async () => {
+    if (source !== 'exact') return;
+    const ok = await deleteRateSet(year);
+    if (!ok) { toast.error('삭제하지 못했습니다.'); return; }
+    reloadYears();
+    // 지운 해를 다시 읽으면 직전 해 값을 이어 쓰는 상태가 됩니다.
+    const again = await resolveRateSet(year);
+    setRates(again.rates); setSource(again.source); setFromYear(again.fromYear);
+    toast.success(`${year}년 기준값을 지웠습니다.`);
+  };
+
+  const markVerified = () =>
+    patch({
+      verified: true,
+      verifiedAt: new Date().toISOString().slice(0, 10),
+    });
+
+  /** 최저임금 고시액과 담당자가 넣은 값이 어긋나는가. */
+  const statutory = STATUTORY_MINIMUM_WAGE[year];
+  const wageMismatch =
+    statutory !== undefined && Number(rates.minimumHourlyWage) !== statutory;
+
+  /** 직전 해와 달라진 항목. 매년 갱신할 때 무엇을 건드렸는지 보여 줍니다. */
+  const changes = previous
+    ? ([
+        ['국민연금', asPercent(previous.nationalPension.rate), asPercent(rates.nationalPension.rate), '%'],
+        ['건강보험', asPercent(previous.healthInsurance.rate), asPercent(rates.healthInsurance.rate), '%'],
+        ['장기요양', asPercent(previous.longTermCare.rate), asPercent(rates.longTermCare.rate), '%'],
+        ['고용보험', asPercent(previous.employmentInsurance.rate), asPercent(rates.employmentInsurance.rate), '%'],
+        ['최저임금', previous.minimumHourlyWage, rates.minimumHourlyWage, '원'],
+        ['국민연금 상한', previous.nationalPension.maxBase, rates.nationalPension.maxBase, '원'],
+        ['식대 비과세', previous.nonTaxableLimits.meal, rates.nonTaxableLimits.meal, '원'],
+      ] as [string, number, number, string][]).filter(([, a, c]) => a !== c)
+    : [];
 
   const num = (v: string) => Number(v.replace(/[,\s]/g, '')) || 0;
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Label htmlFor="year" className="text-sm">
-          기준 연도
-        </Label>
-        <Input
-          id="year"
-          type="number"
-          className="h-8 w-24"
-          value={year}
-          onChange={(e) => setYear(Number(e.target.value) || thisYear)}
-        />
-        {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-        {source === 'carried' && (
-          <Badge variant="secondary" className="text-[11px]">
-            {fromYear}년 값을 이어 쓰는 중
-          </Badge>
-        )}
-        {source === 'default' && (
-          <Badge variant="secondary" className="text-[11px]">
-            등록된 값 없음 — 기본값 표시 중
-          </Badge>
-        )}
-        <div className="ml-auto flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => void handleCreateNext()}>
-            <Plus className="mr-1.5 h-3.5 w-3.5" />
-            {year + 1}년 만들기
-          </Button>
-          <Button size="sm" onClick={() => void handleSave()} disabled={saving}>
-            {saving && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
-            저장
-          </Button>
+      {/* ── 연도 고르기 ──
+          자유 입력만 두면 몇 년치가 등록돼 있는지 알 수 없습니다. 등록된
+          연도를 늘어놓고, 대조가 끝난 해인지 아닌지도 함께 보여 줍니다. */}
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Label className="mr-1 text-sm">기준 연도</Label>
+          {years.map((y) => (
+            <button
+              key={y}
+              type="button"
+              onClick={() => setYear(y)}
+              className={cn(
+                'rounded-md border px-2.5 py-1 text-[13px] tabular-nums transition-colors',
+                y === year
+                  ? 'border-primary bg-primary/10 font-semibold text-primary'
+                  : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+              )}
+            >
+              {y}
+            </button>
+          ))}
+          {!years.includes(year) && (
+            <span className="rounded-md border border-primary bg-primary/10 px-2.5 py-1 text-[13px] font-semibold tabular-nums text-primary">
+              {year}
+            </span>
+          )}
+          <Input
+            type="number"
+            aria-label="다른 연도 보기"
+            className="h-7 w-20 text-[13px]"
+            value={year}
+            onChange={(e) => setYear(Number(e.target.value) || thisYear)}
+          />
+          {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {source === 'exact' && rates.verified && (
+            <Badge variant="outline" className="border-emerald-300 bg-emerald-50 text-[11px] text-emerald-800">
+              <CheckCircle2 className="mr-1 h-3 w-3" />
+              고시값 대조 완료{rates.verifiedAt ? ` · ${rates.verifiedAt}` : ''}
+            </Badge>
+          )}
+          {source === 'exact' && !rates.verified && (
+            <Badge variant="outline" className="border-amber-300 bg-amber-50 text-[11px] text-amber-800">
+              대조 전
+            </Badge>
+          )}
+          {source === 'carried' && (
+            <Badge variant="secondary" className="text-[11px]">{fromYear}년 값을 이어 쓰는 중</Badge>
+          )}
+          {source === 'default' && (
+            <Badge variant="secondary" className="text-[11px]">등록된 값 없음 — 기본값 표시 중</Badge>
+          )}
+
+          <div className="ml-auto flex gap-2">
+            {source === 'exact' && !rates.verified && (
+              <Button variant="outline" size="sm" onClick={markVerified}>
+                <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
+                대조 완료 표시
+              </Button>
+            )}
+            {source === 'exact' && years.length > 1 && (
+              <Button variant="outline" size="sm" onClick={() => void handleDelete()}>
+                <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                {year}년 삭제
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={() => void handleCreateNext()}>
+              <Plus className="mr-1.5 h-3.5 w-3.5" />
+              {year + 1}년 만들기
+            </Button>
+            <Button size="sm" onClick={() => void handleSave()} disabled={saving}>
+              {saving && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+              저장
+            </Button>
+          </div>
         </div>
       </div>
+
+      {/* 직전 해와 달라진 것 — 매년 갱신할 때 무엇을 건드렸는지 보여 줍니다. */}
+      {changes.length > 0 && (
+        <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs">
+          <span className="font-medium">{year - 1}년 대비 변경</span>
+          <span className="ml-2 text-muted-foreground">
+            {changes.map(([label, before, after, unit]) => (
+              <span key={label} className="mr-3 inline-block tabular-nums">
+                {label} {before.toLocaleString('ko-KR')}
+                {unit} → <strong className="text-foreground">{after.toLocaleString('ko-KR')}{unit}</strong>
+              </span>
+            ))}
+          </span>
+        </div>
+      )}
 
       {source !== 'exact' && (
         <div className="flex items-start gap-2 rounded-md border border-accent-amber/40 bg-accent-amber-subtle px-3 py-2 text-xs">
@@ -307,7 +420,31 @@ export default function PayrollRateSettings() {
           <Field label="건강보험 (%)" value={asPercent(rates.healthInsurance.rate)} onChange={(v) => patch({ healthInsurance: { rate: Number((v / 100).toFixed(8)) } })} step={0.001} />
           <Field label="장기요양 (건강보험료의 %)" value={asPercent(rates.longTermCare.rate)} onChange={(v) => patch({ longTermCare: { rate: Number((v / 100).toFixed(8)) } })} step={0.001} />
           <Field label="고용보험 (%)" value={asPercent(rates.employmentInsurance.rate)} onChange={(v) => patch({ employmentInsurance: { rate: Number((v / 100).toFixed(8)) } })} step={0.001} />
-          <Field label="최저임금 (시간급)" value={rates.minimumHourlyWage} onChange={(v) => patch({ minimumHourlyWage: v })} />
+          <div className="space-y-1">
+            <Field label="최저임금 (시간급)" value={rates.minimumHourlyWage} onChange={(v) => patch({ minimumHourlyWage: v })} />
+            <p className="text-[11px] text-muted-foreground tabular-nums">
+              월 환산 {monthlyMinimumWage(rates.minimumHourlyWage, rates.monthlyWorkHours).toLocaleString('ko-KR')}원
+              ({rates.monthlyWorkHours}시간)
+            </p>
+            {statutory !== undefined && (
+              wageMismatch ? (
+                <button
+                  type="button"
+                  onClick={() => patch({ minimumHourlyWage: statutory })}
+                  className="text-left text-[11px] text-amber-700 underline underline-offset-2"
+                >
+                  {year}년 고시액은 {statutory.toLocaleString('ko-KR')}원입니다 — 눌러서 맞추기
+                </button>
+              ) : (
+                <p className="text-[11px] text-emerald-700">{year}년 고시액과 일치</p>
+              )
+            )}
+            {statutory === undefined && (
+              <p className="text-[11px] text-muted-foreground">
+                {year}년 고시액은 등록돼 있지 않습니다. 최저임금위원회 고시를 확인하세요.
+              </p>
+            )}
+          </div>
           <Field label="월 소정근로시간" value={rates.monthlyWorkHours} onChange={(v) => patch({ monthlyWorkHours: v })} />
           <Field label="1일 소정근로시간" value={rates.standardDailyHours} onChange={(v) => patch({ standardDailyHours: v })} step={0.5} />
         </CardContent>

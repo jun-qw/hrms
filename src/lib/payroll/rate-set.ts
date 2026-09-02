@@ -66,6 +66,17 @@ export interface PayrollRateSet {
   year: number;
   /** 이 값들을 어디서 확인했는지 — 매년 갱신할 때 근거를 남깁니다. */
   note: string;
+  /**
+   * 고시값과 대조를 끝냈는가.
+   *
+   * 새해 기준값은 직전 해를 복사해 만들기 때문에, 손대지 않으면 작년 요율로
+   * 급여가 나갑니다. 숫자만 봐서는 대조한 값인지 복사만 된 값인지 구분되지
+   * 않아 눈에 보이는 표시를 따로 둡니다. 급여계산 화면에서도 경고합니다.
+   */
+  verified?: boolean;
+  /** 대조한 날짜 (YYYY-MM-DD). 누가 언제 확인했는지 남깁니다. */
+  verifiedAt?: string | null;
+  verifiedBy?: string | null;
 
   /** 근로자 부담분만 다룹니다. 사업주 부담분은 급여 계산에 들어가지 않습니다. */
   nationalPension: { rate: number; maxBase: number; minBase: number };
@@ -124,6 +135,29 @@ export interface PayrollRateSet {
  * 국민연금공단·건강보험공단·고용노동부·국세청 고시로 대조해 주세요.
  * 대조가 끝나면 `note`를 근거로 바꿔 적어 두면 다음 담당자가 압니다.
  */
+/**
+ * 연도별 최저임금 고시액 (시간급).
+ *
+ * 최저임금위원회가 매년 8월에 고시하는 값입니다. 담당자가 직접 넣은 값과
+ * 대조해 보여 주기 위한 것이고, 자동으로 덮어쓰지는 않습니다 — 회사가
+ * 수습기간 감액 같은 이유로 다른 값을 두었을 수 있고, 여기 적힌 값이 최신
+ * 고시와 어긋날 수도 있기 때문입니다. 어긋나면 화면에서 양쪽을 나란히
+ * 보여 주고 담당자가 정합니다.
+ */
+export const STATUTORY_MINIMUM_WAGE: Record<number, number> = {
+  2021: 8_720,
+  2022: 9_160,
+  2023: 9_620,
+  2024: 9_860,
+  2025: 10_030,
+  2026: 10_320,
+};
+
+/** 월 환산액. 최저임금 고시와 같은 방식으로 209시간을 씁니다. */
+export function monthlyMinimumWage(hourly: number, monthlyHours = 209): number {
+  return Math.round(hourly * monthlyHours);
+}
+
 export const DEFAULT_RATE_SET: PayrollRateSet = {
   year: 2026,
   note: '개편 전 코드의 추정값을 이관했습니다. 고시값 대조 전입니다.',
@@ -186,5 +220,10 @@ export function copyRateSetForYear(source: PayrollRateSet, year: number): Payrol
     ...structuredClone(source),
     year,
     note: `${source.year}년 값을 복사했습니다. ${year}년 고시값으로 대조하세요.`,
+    // 복사본은 대조된 값이 아닙니다. 이 표시를 지우지 않으면 작년 요율이
+    // 확인된 값처럼 보입니다.
+    verified: false,
+    verifiedAt: null,
+    verifiedBy: null,
   };
 }

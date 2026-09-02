@@ -1007,6 +1007,27 @@ export default function PayrollCalculatePage() {
                     직원 불러오기
                   </Button>
                 </div>
+
+                {/* 그 해 기준값이 대조되지 않았으면 여기서 짚습니다. 요율은
+                    매년 바뀌고, 새해 기준값은 직전 해를 복사해 만들기 때문에
+                    손대지 않으면 작년 요율로 급여가 나갑니다. */}
+                {(rateSet.source !== 'exact' || !rateSet.rates.verified) && (
+                  <div className="mt-4 flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
+                    <span>
+                      {rateSet.source === 'exact'
+                        ? `${year}년 기준값이 아직 고시값과 대조되지 않았습니다.`
+                        : rateSet.source === 'carried'
+                          ? `${year}년 기준값이 없어 ${rateSet.fromYear}년 값으로 계산합니다.`
+                          : `${year}년 기준값이 없어 기본값으로 계산합니다.`}{' '}
+                      4대보험 요율과 최저임금은 매년 바뀝니다.{' '}
+                      <Link href="/settings?tab=payroll-rates" className="underline underline-offset-2">
+                        설정 &gt; 급여 기준값
+                      </Link>
+                      에서 확인하세요.
+                    </span>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
