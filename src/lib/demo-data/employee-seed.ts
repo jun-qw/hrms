@@ -186,7 +186,7 @@ const ROSTER: readonly RosterRow[] = [
   { no: 'DA240923001', name: '김경목', phone: '010-4031-1300', email: null, hire: '2024-09-23', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '명부 직위: 생' },
   { no: 'DA240925001', name: '만달', phone: '010-3902-9811', email: null, hire: '2024-09-25', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: 'E-9/네팔 · 명부 직위: 생' },
   { no: 'DA241021001', name: '알빈', phone: '010-8350-2995', email: null, hire: '2024-10-21', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: 'F-6 · 명부 직위: 생' },
-  { no: 'DA241022001', name: '림부', phone: null, email: null, hire: '2024-10-22', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: 'E-9/네팔 · 명부 직위: 생' },
+  { no: 'DA241022001', name: '림부', phone: '010-8474-9001', email: null, hire: '2024-10-22', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: 'E-9/네팔 · 명부 직위: 생' },
   { no: 'DA241022002', name: '가네쉬', phone: '010-7917-9891', email: null, hire: '2024-10-22', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: 'E-9/네팔 · 명부 직위: 생' },
   { no: 'DA241106001', name: '찬드라', phone: '010-2115-7782', email: null, hire: '2024-11-06', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: 'E-9/네팔 · 명부 직위: 생' },
   { no: 'DA241111001', name: '이수윤', phone: '010-5521-1134', email: null, hire: '2024-11-11', dept: 'dept-00', rank: 'rank-01', title: 'title-1', jobClass: 'field', note: '명부 직위: 생' },

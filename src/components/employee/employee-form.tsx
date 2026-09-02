@@ -18,6 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useCodeMap, CODE } from '@/lib/hooks/use-code';
 import { isCurrentlyEffective } from '@/lib/utils/effective-status';
 import { DEFAULT_PAY_METHOD, JOB_CLASS_LABEL, PAY_METHOD_LABEL } from '@/types';
+import { isMobileNumber } from '@/lib/attendance/import-parse';
 import type { Employee, PositionRank, PositionTitle, Department } from '@/types';
 
 const employeeSchema = z.object({
@@ -30,7 +31,9 @@ const employeeSchema = z.object({
   phone: z
     .string()
     .min(1, '휴대폰 번호를 입력하세요. 근태기록을 직원에게 붙이는 유일한 열쇠입니다.')
-    .refine((v) => /^01[016789]d{7,8}$/.test(v.replace(/D/g, '')), {
+    // 정규화는 normalizePhone 하나만 씁니다 — 근태 가져오기가 직원을 찾을 때
+    // 쓰는 것과 같은 규칙이어야, 화면에서 통과한 번호가 근태에서도 붙습니다.
+    .refine((v) => isMobileNumber(v), {
       message: '휴대폰 번호 형식이 아닙니다. 예: 010-1234-5678',
     }),
   birth_date: z.string().optional(),

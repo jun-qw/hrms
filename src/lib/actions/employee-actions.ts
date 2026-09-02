@@ -56,6 +56,7 @@ import { toApp, toDb } from './mappers';
 import { encryptSensitive, maskStored } from '@/lib/security/sensitive';
 import { readScope, redactForScope } from './read-scope';
 import { recordAudit } from './audit';
+import { normalizePhone } from '@/lib/attendance/import-parse';
 import {
   createAssignment,
   fetchAssignments,
@@ -196,14 +197,15 @@ export async function fetchEmployeeData(): Promise<EmployeeModuleData | null> {
  * 표기가 제각각이라 숫자만 남긴 형태로 비교합니다.
  */
 async function phoneTakenBy(phone: string | null | undefined, exceptId?: string): Promise<string | null> {
-  const key = String(phone ?? '').replace(/D/g, '');
+  // 정규화는 normalizePhone 하나만 씁니다. 같은 규칙을 여러 곳에 베껴 두었더니
+  // 한 곳의 정규식이 깨진 것을 한참 뒤에야 알았습니다 — 그동안 하이픈 표기가
+  // 다른 번호는 중복으로 걸리지 않았습니다.
+  const key = normalizePhone(phone);
   if (!key) return null;
   const rows = await db
     .select({ id: schema.employees.id, name: schema.employees.name, phone: schema.employees.phone })
     .from(schema.employees);
-  const clash = rows.find(
-    (r) => r.id !== exceptId && String(r.phone ?? '').replace(/D/g, '') === key,
-  );
+  const clash = rows.find((r) => r.id !== exceptId && normalizePhone(r.phone) === key);
   return clash ? clash.name : null;
 }
 

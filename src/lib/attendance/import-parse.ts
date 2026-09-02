@@ -178,3 +178,14 @@ export function parseStatus(raw: string): string | null {
   for (const [word, status] of STATUS_WORDS) if (t.includes(word)) return status;
   return null;
 }
+
+/**
+ * 휴대폰 번호로 볼 수 있는 형태인가.
+ *
+ * 사원 등록 화면과 근태 가져오기가 같은 판정을 써야 합니다. 화면에서 통과한
+ * 번호가 근태에서는 안 붙거나 그 반대가 되면, 담당자는 어느 쪽이 맞는지 알
+ * 방법이 없습니다.
+ */
+export function isMobileNumber(raw: string | null | undefined): boolean {
+  return /^01[016789]\d{7,8}$/.test(normalizePhone(raw));
+}
