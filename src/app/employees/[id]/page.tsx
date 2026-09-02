@@ -3,6 +3,7 @@
 import { use, useState } from 'react';
 import { Breadcrumb } from '@/components/layout/breadcrumb';
 import { EmployeeSummaryPanel } from '@/components/employee/employee-summary-panel';
+import { ResidentNumberField } from '@/components/employee/resident-number-field';
 import { EmployeeAssignmentHistory } from '@/components/employee/employee-assignment-history';
 import { EmployeeFilesTab } from '@/components/employee/employee-files-tab';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,6 +19,7 @@ import {
 import { Pencil, FileText, ChevronDown, ClipboardList, Plus, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useEmployeeStore } from '@/lib/stores/employee-store';
+import { useAuthStore } from '@/lib/stores/auth-store';
 import { useCodeMap, CODE } from '@/lib/hooks/use-code';
 import EmployeePayrollTab from '@/components/employee/employee-payroll-tab';
 import {
@@ -33,6 +35,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
   const DEGREE_LABELS = useCodeMap(CODE.DEGREE_LABELS);
   const { id } = use(params);
 
+  const session = useAuthStore((s) => s.session);
   const employees = useEmployeeStore((s) => s.employees);
   const departments = useEmployeeStore((s) => s.departments);
   const positionRanks = useEmployeeStore((s) => s.positionRanks);
@@ -239,6 +242,11 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
               <div><p className="text-sm text-muted-foreground">이메일</p><p className="font-medium">{employee.email}</p></div>
               <div><p className="text-sm text-muted-foreground">전화번호</p><p className="font-medium">{employee.phone ?? '-'}</p></div>
               <div><p className="text-sm text-muted-foreground">생년월일</p><p className="font-medium">{employee.birth_date ?? '-'}</p></div>
+              <ResidentNumberField
+                employeeId={id}
+                masked={employee.resident_number}
+                canReveal={session?.role === 'admin' || session?.role === 'hr_manager'}
+              />
               <div><p className="text-sm text-muted-foreground">주소</p><p className="font-medium">{employee.address ?? '-'} {employee.address_detail ?? ''}</p></div>
               <div><p className="text-sm text-muted-foreground">은행</p><p className="font-medium">{employee.bank_name ?? '-'} {employee.bank_account ?? ''}</p></div>
               <div><p className="text-sm text-muted-foreground">비상연락처</p><p className="font-medium">{employee.emergency_contact_name ? `${employee.emergency_contact_name} (${employee.emergency_contact_relation}) ${employee.emergency_contact_phone}` : '-'}</p></div>

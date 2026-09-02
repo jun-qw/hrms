@@ -251,6 +251,32 @@ docker compose exec -T db pg_dump -U hrms hrms | gzip > hrms-$(date +%F).sql.gz
 
 ---
 
+### Resident registration numbers
+
+They are **stored encrypted** and shown masked (`900101-1******`), as the
+Personal Information Protection Act (제24조의2) requires.
+
+To see one in full, open **Employees › employee card** and use **전체 보기**
+next to the number, giving a reason. The access is recorded in the audit log —
+who, when, whose, and why — and the value re-hides after 30 seconds. Only the
+system administrator and HR managers can do this; department managers cannot.
+
+> **Back up the encryption key.** It is `RESIDENT_NUMBER_KEY` in
+> `.env.local`. Lose it and the stored numbers cannot be recovered — a
+> database backup alone is not enough.
+
+### What each role can read
+
+Roles change **the data itself**, not just which menus appear.
+
+| Role | Sees |
+|------|------|
+| Admin · HR manager | Everything, for everyone |
+| Dept. manager · Employee | Names, departments, ranks. Attendance, leave and pay for **themselves only** |
+
+Pay, bank accounts, resident numbers, home addresses and personal contacts go
+only to HR and the person themselves. The register screens are HR-only.
+
 ## 7. Security
 
 - **Change the initial administrator password.** It is written in plain text in

@@ -17,6 +17,7 @@
 import { eq, inArray } from 'drizzle-orm';
 import { db, schema } from '@/lib/db';
 import { getSession } from '@/lib/auth/session';
+import { recordAudit } from './audit';
 import { toApp, toDb, camelToSnake } from './mappers';
 import { PAYROLL_ITEM_LEGACY_IDS } from '@/lib/demo-data/payroll-seed';
 import type {
@@ -429,6 +430,16 @@ export async function savePayroll(payroll: SavedPayroll): Promise<SavedPayroll |
       .returning();
     if (!head) return null;
 
+    await recordAudit({
+      action: 'create', targetType: 'payroll', targetId: head.id,
+      targetLabel: `${payroll.year}년 ${payroll.month}월 급여`,
+      details: {
+        employeeId: payroll.employee_id,
+        totalEarnings: payroll.total_earnings,
+        netPay: payroll.net_pay,
+      },
+    });
+
     await db.delete(schema.payrollDetails).where(eq(schema.payrollDetails.payrollId, head.id));
     if (payroll.items.length > 0) {
       await db.insert(schema.payrollDetails).values(
@@ -463,6 +474,11 @@ export async function updatePayrollStatus(
       .where(eq(schema.payrolls.id, id))
       .returning();
     if (!row) return null;
+    await recordAudit({
+      action: 'confirm', targetType: 'payroll', targetId: id,
+      targetLabel: `${row.year}년 ${row.month}월 급여`,
+      details: { status, employeeId: row.employeeId },
+    });
     const maps = await loadItemIdMaps();
     return readPayroll(row.id, maps);
   } catch (err) {

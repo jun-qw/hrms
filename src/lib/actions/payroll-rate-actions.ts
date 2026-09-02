@@ -38,8 +38,19 @@ export interface ResolvedRateSet {
  * 계산해 두면 최소한 자릿수가 맞기 때문입니다. 다만 화면에는 "전년도 값을
  * 쓰고 있다"고 표시해야 담당자가 갱신을 놓치지 않습니다.
  */
+/**
+ * 요율 자체는 공개된 고시값이지만, 어느 회사가 어떤 값을 쓰는지는 내부 정보이고
+ * 급여명세서 화면이 이 값을 읽습니다. 로그인은 요구합니다.
+ */
+async function assertRead(): Promise<void> {
+  if (process.env.AUTH_MODE !== 'db') return;
+  const session = await getSession();
+  if (!session) throw new Error('unauthorized');
+}
+
 export async function resolveRateSet(year: number): Promise<ResolvedRateSet> {
   try {
+    await assertRead();
     const [exact] = await db
       .select()
       .from(schema.payrollRateSets)
@@ -69,6 +80,7 @@ export async function resolveRateSet(year: number): Promise<ResolvedRateSet> {
 
 export async function fetchRateSets(): Promise<PayrollRateSet[]> {
   try {
+    await assertRead();
     const rows = await db
       .select()
       .from(schema.payrollRateSets)

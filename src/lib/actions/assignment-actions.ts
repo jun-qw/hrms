@@ -22,6 +22,13 @@ async function assertHrWrite(): Promise<void> {
   if (!session || !HR_ROLES.includes(session.role)) throw new Error('forbidden');
 }
 
+/** 발령 이력은 전 직원의 소속·직급 변동입니다. 로그인은 있어야 봅니다. */
+async function assertRead(): Promise<void> {
+  if (process.env.AUTH_MODE !== 'db') return;
+  const session = await getSession();
+  if (!session) throw new Error('unauthorized');
+}
+
 /** 로컬 기준 오늘 (YYYY-MM-DD). DB의 date 컬럼과 같은 방식으로 비교합니다. */
 function today(): string {
   const d = new Date();
@@ -42,6 +49,7 @@ function dayBefore(date: string): string {
 
 export async function fetchAssignments(employeeId?: string): Promise<EmployeeAssignment[]> {
   try {
+    await assertRead();
     const rows = employeeId
       ? await db
           .select()
@@ -69,6 +77,7 @@ export async function fetchAssignments(employeeId?: string): Promise<EmployeeAss
  */
 export async function fetchAssignmentsAsOf(date: string): Promise<EmployeeAssignment[]> {
   try {
+    await assertRead();
     const rows = await db
       .select()
       .from(schema.employeeAssignments)
@@ -266,6 +275,7 @@ export async function syncCurrentAssignments(employeeId?: string): Promise<numbe
  */
 export async function fetchPendingAssignments(): Promise<EmployeeAssignment[]> {
   try {
+    await assertRead();
     const rows = await db
       .select()
       .from(schema.employeeAssignments)

@@ -31,6 +31,7 @@ export function Sidebar() {
   const { t } = useT();
   const role = session?.role ?? 'employee';
   const allowedHrefs = menuPermissions?.[role] ?? DEFAULT_MENU_HREFS;
+  const isHr = role === 'admin' || role === 'hr_manager';
 
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-60 border-r bg-card">
@@ -49,6 +50,8 @@ export function Sidebar() {
             // (예: 연차대장은 /leave, 근태·휴가 메뉴는 /attendance).
             const onChild = item.children?.some((c) => pathname.startsWith(c.href)) ?? false;
             const open = inSection || onChild;
+            // 대장은 인사 담당 화면이라 일반 직원에게는 목록에서도 뺍니다.
+            const visibleChildren = (item.children ?? []).filter((c) => isHr || !c.hrOnly);
 
             return (
               <div key={item.href}>
@@ -72,9 +75,9 @@ export function Sidebar() {
                   {t(item.label)}
                 </Link>
 
-                {open && item.children && item.children.length > 0 && (
+                {open && visibleChildren.length > 0 && (
                   <div className="mb-1.5 ml-[15px] space-y-px border-l pl-3 pt-0.5">
-                    {item.children.map((child) => {
+                    {visibleChildren.map((child) => {
                       const active = pathname === child.href || pathname.startsWith(`${child.href}/`);
                       return (
                         <Link

@@ -198,6 +198,24 @@ export async function runSeedDemo(options: { force?: boolean } = {}) {
       personalEmail: e.personal_email,
       marriageDate: e.marriage_date,
     });
+
+    // 최초 배치 구간. `employees` 의 부서·직급은 오늘 유효한 구간의 사본이고,
+    // 진짜 기록은 이 표입니다. 이것이 없으면 시점 조회가 아무것도 돌려주지
+    // 못해 발령 이력과 과거 조직도가 통째로 빕니다.
+    //
+    // 0009 마이그레이션이 기존 자료를 같은 방식으로 소급 생성했는데, 시드는
+    // 이 표를 지우기만 하고 다시 만들지 않아 재적재할 때마다 이력이
+    // 사라졌습니다.
+    await db.insert(schema.employeeAssignments).values({
+      employeeId: id(empIds, e.id)!,
+      effectiveFrom: e.hire_date,
+      effectiveTo: null,
+      departmentId: deptIds.get(e.department_id ?? '') ?? null,
+      positionRankId: rankIds.get(e.position_rank_id ?? '') ?? null,
+      positionTitleId: titleIds.get(e.position_title_id ?? '') ?? null,
+      workplaceId: null,
+      reason: '입사 시 최초 배치',
+    });
   }
 
   for (const c of seedCareerHistories) {

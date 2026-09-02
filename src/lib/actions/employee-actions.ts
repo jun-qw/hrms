@@ -53,6 +53,9 @@ async function assertEmployeeWrite(employeeId: string): Promise<void> {
 }
 
 import { toApp, toDb } from './mappers';
+import { encryptSensitive, maskStored } from '@/lib/security/sensitive';
+import { readScope, redactForScope } from './read-scope';
+import { recordAudit } from './audit';
 import {
   createAssignment,
   fetchAssignments,
@@ -79,9 +82,51 @@ export interface EmployeeModuleData {
   assignments: EmployeeAssignment[];
 }
 
+/**
+ * 목록·상세로 나가는 직원 자료에서 주민등록번호를 가립니다.
+ *
+ * 저장은 암호화되어 있으므로 그대로 내보내면 암호문이 화면에 뜹니다. 복호화해
+ * 보내면 이번에는 평문이 브라우저까지 갑니다 — 개발자도구만 열면 전 직원의
+ * 주민번호가 보입니다. 그래서 여기서 마스킹된 값으로 바꿔 내보내고, 전체
+ * 열람은 revealResidentNumber 로만 열립니다.
+ */
+/**
+ * 저장으로 들어온 주민등록번호를 어떻게 다룰지 정합니다.
+ *
+ * 화면은 마스킹된 값(`900101-1******`)을 받아 들고 있습니다. 사용자가 그 칸을
+ * 건드리지 않고 다른 항목만 고쳐 저장하면, 마스킹 문자열이 그대로 올라와
+ * **진짜 번호를 별표로 덮어씁니다.** 되돌릴 수 없는 손실이라 여기서 막습니다.
+ *
+ * - 별표가 섞여 있으면 "안 고쳤다"는 뜻이므로 그 항목을 저장에서 뺍니다.
+ * - 진짜 번호면 암호화해서 넣습니다.
+ * - 빈 값이면 지웁니다.
+ */
+function normalizeResidentInput(
+  values: Record<string, unknown>,
+): Record<string, unknown> {
+  if (!('residentNumber' in values)) return values;
+  const raw = values.residentNumber;
+  if (raw === null || raw === undefined || String(raw).trim() === '') {
+    return { ...values, residentNumber: null };
+  }
+  const text = String(raw);
+  if (text.includes('*')) {
+    const { residentNumber: _ignored, ...rest } = values;
+    void _ignored;
+    return rest;
+  }
+  return { ...values, residentNumber: encryptSensitive(text) };
+}
+
+function withMaskedResident(employee: Employee): Employee {
+  if (!employee.resident_number) return employee;
+  return { ...employee, resident_number: maskStored(employee.resident_number) };
+}
+
 export async function fetchEmployeeData(): Promise<EmployeeModuleData | null> {
   try {
     await assertRead();
+    const scope = await readScope();
 
     // 발령일이 지난 예약 발령을 현재값으로 옮겨 담습니다. 자료를 읽을 때마다
     // 한 번 맞추므로 별도 스케줄러가 필요 없습니다.
@@ -122,7 +167,11 @@ export async function fetchEmployeeData(): Promise<EmployeeModuleData | null> {
       positionTitles: positionTitles.map((r) => toApp<PositionTitle>(r)),
       jobCategories: jobCategories.map((r) => toApp<JobCategory>(r)),
       salaryGrades: salaryGrades.map((r) => toApp<SalaryGrade>(r)),
-      employees: employees.map((r) => toApp<Employee>(r)),
+      // 이름·부서·직급은 조직도와 결재선에 필요해 모두에게 나갑니다.
+      // 급여·계좌·주민번호·집주소는 인사 담당과 본인에게만 나갑니다.
+      employees: employees.map((r) =>
+        redactForScope(scope, withMaskedResident(toApp<Employee>(r))),
+      ),
       careerHistories: careerHistories.map((r) => toApp<CareerHistory>(r)),
       educationHistories: educationHistories.map((r) => toApp<EducationHistory>(r)),
       certifications: certifications.map((r) => toApp<Certification>(r)),
@@ -163,7 +212,9 @@ export async function createEmployee(employee: Employee): Promise<Employee | nul
     await assertHrWrite();
     const taken = await phoneTakenBy(employee.phone);
     if (taken) throw new Error(`휴대폰 번호를 ${taken} 님이 이미 쓰고 있습니다.`);
-    const values = toDb(employee as unknown as Record<string, unknown>, { dropId: true });
+    const values = normalizeResidentInput(
+      toDb(employee as unknown as Record<string, unknown>, { dropId: true }),
+    );
     const [row] = await db
       .insert(schema.employees)
       .values(values as typeof schema.employees.$inferInsert)
@@ -172,6 +223,10 @@ export async function createEmployee(employee: Employee): Promise<Employee | nul
     // Every employee starts with an open assignment interval from their hire
     // date; without one the as-of lookup would have nothing to return for them.
     if (row) {
+      await recordAudit({
+        action: 'create', targetType: 'employee', targetId: row.id,
+        targetLabel: `${row.name} (${row.employeeNumber ?? '사번없음'})`,
+      });
       await createAssignment({
         employeeId: row.id,
         effectiveFrom: row.hireDate,
@@ -185,7 +240,7 @@ export async function createEmployee(employee: Employee): Promise<Employee | nul
       // 계약서·계정·연차 부여 같은 항목이 그대로 누락됩니다.
       await startEmployeeProcess(row.id, 'onboarding');
     }
-    return toApp<Employee>(row);
+    return withMaskedResident(toApp<Employee>(row));
   } catch (err) {
     console.error('createEmployee failed:', err);
     return null;
@@ -202,13 +257,22 @@ export async function updateEmployee(
       const taken = await phoneTakenBy(patch.phone, id);
       if (taken) throw new Error(`휴대폰 번호를 ${taken} 님이 이미 쓰고 있습니다.`);
     }
-    const values = toDb(patch as Record<string, unknown>, { dropId: true });
+    const values = normalizeResidentInput(toDb(patch as Record<string, unknown>, { dropId: true }));
     const [row] = await db
       .update(schema.employees)
       .set({ ...values, updatedAt: new Date() })
       .where(eq(schema.employees.id, id))
       .returning();
-    return row ? toApp<Employee>(row) : null;
+    if (row) {
+      await recordAudit({
+        action: 'update', targetType: 'employee', targetId: id,
+        targetLabel: `${row.name} (${row.employeeNumber ?? '사번없음'})`,
+        // 무엇을 고쳤는지만 남기고 값은 남기지 않습니다 — 감사로그가
+        // 개인정보 사본이 되면 안 됩니다.
+        details: { fields: Object.keys(patch) },
+      });
+    }
+    return row ? withMaskedResident(toApp<Employee>(row)) : null;
   } catch (err) {
     console.error('updateEmployee failed:', err);
     return null;

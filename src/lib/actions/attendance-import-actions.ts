@@ -14,6 +14,7 @@ import { and, eq, inArray, or } from 'drizzle-orm';
 import { db, schema } from '@/lib/db';
 import { getSession } from '@/lib/auth/session';
 import { normalizePhone } from '@/lib/attendance/import-parse';
+import { recordAudit } from './audit';
 
 const HR_ROLES = ['admin', 'hr_manager'];
 
@@ -280,6 +281,11 @@ export async function importAttendanceRows(
     }
 
     const saved = toInsert.length + toUpdate.length;
+    await recordAudit({
+      action: 'import', targetType: 'attendance',
+      targetLabel: `근태 일괄 등록 ${saved}건`,
+      details: { inserted: toInsert.length, updated: toUpdate.length, errors: summary.오류 },
+    });
     return { ok: true, rows: resolved, summary, saved };
   } catch (err) {
     console.error('importAttendanceRows failed:', err);

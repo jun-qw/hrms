@@ -26,6 +26,19 @@ async function assertHrWrite(): Promise<void> {
   if (!session || !HR_ROLES.includes(session.role)) throw new Error('forbidden');
 }
 
+/**
+ * 읽기도 HR로 막습니다.
+ *
+ * 퇴사 미리보기는 사람마다 퇴직금과 연차 정산액을 계산해 돌려줍니다. 남의
+ * 급여를 보는 것과 같아서, 조회라는 이유로 열어 둘 수 없습니다. 입퇴사 현황도
+ * 누가 나가는지가 그대로 드러납니다.
+ */
+async function assertHrRead(): Promise<void> {
+  if (process.env.AUTH_MODE !== 'db') return;
+  const session = await getSession();
+  if (!session || !HR_ROLES.includes(session.role)) throw new Error('forbidden');
+}
+
 function today(): string {
   const d = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -67,6 +80,7 @@ export async function startEmployeeProcess(
   type: 'onboarding' | 'offboarding',
 ): Promise<{ ok: boolean; workflowId?: string; skipped?: boolean; error?: string }> {
   try {
+    await assertHrWrite();
     const [existing] = await db
       .select()
       .from(schema.workflows)
@@ -289,6 +303,7 @@ export async function previewBulkResign(
   resignationDate: string,
 ): Promise<ResignPreviewRow[]> {
   try {
+    await assertHrRead();
     const rows: ResignPreviewRow[] = [];
     const departments = await db.select().from(schema.departments);
     const balances = await db.select().from(schema.leaveBalances);
@@ -405,6 +420,7 @@ export async function fetchPipelineSummary(): Promise<PipelineSummary> {
     upcomingAssignments: 0,
   };
   try {
+    await assertHrRead();
     const now = today();
     const in30 = new Date();
     in30.setDate(in30.getDate() + 30);
@@ -447,6 +463,7 @@ export async function fetchPipelineSummary(): Promise<PipelineSummary> {
 /** 인력대장 등에서 쓰는, 현재 열려 있는 프로세스의 직원 id 집합. */
 export async function fetchOpenProcessEmployees(): Promise<Employee[]> {
   try {
+    await assertHrRead();
     const flows = await db
       .select()
       .from(schema.workflows)

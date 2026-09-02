@@ -42,6 +42,9 @@ services:
       DB_DRIVER: pg
       AUTH_MODE: db
       SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET in .env}
+      # 주민등록번호 암호화 키. 비우면 SESSION_SECRET 에서 파생합니다.
+      # 잃어버리면 저장된 주민번호를 복구할 수 없으니 백업에 포함하세요.
+      RESIDENT_NUMBER_KEY: ${RESIDENT_NUMBER_KEY:-}
       SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-8}
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@example.com}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:?set SEED_ADMIN_PASSWORD in .env}

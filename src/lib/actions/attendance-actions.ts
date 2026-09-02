@@ -9,6 +9,7 @@ import { and, eq } from 'drizzle-orm';
 import { db, schema } from '@/lib/db';
 import { getSession } from '@/lib/auth/session';
 import { toApp, toDb } from './mappers';
+import { filterScoped, readScope } from './read-scope';
 import type { Attendance } from '@/types';
 import type { AttendanceCloseout } from '@/lib/stores/attendance-store';
 
@@ -43,13 +44,16 @@ export interface AttendanceModuleData {
 
 export async function fetchAttendanceData(): Promise<AttendanceModuleData | null> {
   try {
-    await assertRead();
+    // 인사 담당이 아니면 자기 근태만 봅니다. 예전에는 로그인만 확인하고
+    // 전 직원의 근태를 그대로 내려보냈습니다 — 메뉴는 감춰져 있었지만
+    // 주소를 직접 치면 115명이 다 보였습니다.
+    const scope = await readScope();
     const [records, closeouts] = await Promise.all([
       db.select().from(schema.attendances),
       db.select().from(schema.attendanceCloseouts),
     ]);
     return {
-      records: records.map((r) => toApp<Attendance>(r)),
+      records: filterScoped(scope, records, (r) => r.employeeId).map((r) => toApp<Attendance>(r)),
       closeouts: closeouts.map((r) => toApp<AttendanceCloseout>(r)),
     };
   } catch (err) {

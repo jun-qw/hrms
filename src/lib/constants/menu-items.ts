@@ -24,6 +24,15 @@ export interface MenuChild {
   href: string;
   /** translation key — resolve with useT() */
   label: TranslationKey;
+  /**
+   * 인사 담당만 여는 화면.
+   *
+   * 대장은 전 직원을 한 화면에 놓고 다루는 관리 도구입니다. 일반 직원이 열면
+   * 자기 줄만 값이 차 있고 나머지 백여 줄이 비어 있는 표를 보게 됩니다 —
+   * 자료가 새는 것은 아니지만 볼 이유가 없는 화면입니다. 본인 근태와 휴가는
+   * 마이페이지와 근태관리 첫 화면에서 봅니다.
+   */
+  hrOnly?: boolean;
 }
 
 export interface MenuItem {
@@ -72,10 +81,10 @@ export const ALL_MENU_ITEMS: MenuItem[] = [
     description: 'menuDesc.workforce',
     group: 'menuGroup.workforce',
     children: [
-      { href: '/employees/roster', label: 'menu.roster' },
-      { href: '/employees/pipeline', label: 'menu.pipeline' },
-      { href: '/appointments', label: 'menu.appointments' },
-      { href: '/employees/retirement', label: 'menu.retirement' },
+      { href: '/employees/roster', label: 'menu.roster' , hrOnly: true },
+      { href: '/employees/pipeline', label: 'menu.pipeline' , hrOnly: true },
+      { href: '/appointments', label: 'menu.appointments' , hrOnly: true },
+      { href: '/employees/retirement', label: 'menu.retirement' , hrOnly: true },
     ],
   },
   {
@@ -84,7 +93,7 @@ export const ALL_MENU_ITEMS: MenuItem[] = [
     icon: Network,
     description: 'menuDesc.organization',
     group: 'menuGroup.organization',
-    children: [{ href: '/employees/workplace-assignment', label: 'menu.workplaceAssignment' }],
+    children: [{ href: '/employees/workplace-assignment', label: 'menu.workplaceAssignment' , hrOnly: true }],
   },
   {
     href: '/attendance',
@@ -93,11 +102,11 @@ export const ALL_MENU_ITEMS: MenuItem[] = [
     description: 'menuDesc.timeAndLeave',
     group: 'menuGroup.timeAndLeave',
     children: [
-      { href: '/attendance/register', label: 'menu.attendanceRegister' },
-      { href: '/attendance/import', label: 'menu.attendanceImport' },
-      { href: '/leave/register', label: 'menu.leaveRegister' },
+      { href: '/attendance/register', label: 'menu.attendanceRegister' , hrOnly: true },
+      { href: '/attendance/import', label: 'menu.attendanceImport' , hrOnly: true },
+      { href: '/leave/register', label: 'menu.leaveRegister' , hrOnly: true },
       { href: '/leave', label: 'menu.leaveRequests' },
-      { href: '/attendance/admin', label: 'menu.attendanceCloseout' },
+      { href: '/attendance/admin', label: 'menu.attendanceCloseout' , hrOnly: true },
     ],
   },
   {
@@ -107,11 +116,11 @@ export const ALL_MENU_ITEMS: MenuItem[] = [
     description: 'menuDesc.payroll',
     group: 'menuGroup.payroll',
     children: [
-      { href: '/payroll/salaries', label: 'menu.salaryBase' },
-      { href: '/payroll/calculate', label: 'menu.payrollCalculate' },
-      { href: '/payroll/dashboard', label: 'menu.payrollRegister' },
-      { href: '/payroll/severance', label: 'menu.severance' },
-      { href: '/payroll/year-end-tax', label: 'menu.yearEndTax' },
+      { href: '/payroll/salaries', label: 'menu.salaryBase' , hrOnly: true },
+      { href: '/payroll/calculate', label: 'menu.payrollCalculate' , hrOnly: true },
+      { href: '/payroll/dashboard', label: 'menu.payrollRegister' , hrOnly: true },
+      { href: '/payroll/severance', label: 'menu.severance' , hrOnly: true },
+      { href: '/payroll/year-end-tax', label: 'menu.yearEndTax' , hrOnly: true },
     ],
   },
   {
@@ -120,7 +129,7 @@ export const ALL_MENU_ITEMS: MenuItem[] = [
     icon: Settings,
     description: 'menuDesc.settings',
     group: 'menuGroup.system',
-    children: [{ href: '/audit-log', label: 'menu.auditLog' }],
+    children: [{ href: '/audit-log', label: 'menu.auditLog' , hrOnly: true }],
   },
 ];
 
@@ -172,6 +181,14 @@ const EXTRA_COVERAGE: Record<string, string[]> = {
   '/': ['/my', '/approval', '/issues'],
   '/settings': ['/audit-log', '/workflows'],
 };
+
+/** 이 경로가 인사 담당 전용인가. 긴 경로가 먼저 걸리도록 정렬해 비교합니다. */
+export function isHrOnlyPath(pathname: string): boolean {
+  const children = ALL_MENU_ITEMS.flatMap((m) => m.children ?? [])
+    .filter((c) => c.hrOnly)
+    .sort((a, b) => b.href.length - a.href.length);
+  return children.some((c) => pathname === c.href || pathname.startsWith(`${c.href}/`));
+}
 
 /** 허용된 메뉴로 실제로 열 수 있는 최상위 경로 전체. */
 export function coveredBasePaths(allowedMenuHrefs: string[]): Set<string> {

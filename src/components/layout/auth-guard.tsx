@@ -4,9 +4,10 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
-import { coveredBasePaths } from '@/lib/constants/menu-items';
+import { coveredBasePaths, isHrOnlyPath } from '@/lib/constants/menu-items';
 
 const PUBLIC_PATHS = ['/login'];
+const HR_ROLES = ['admin', 'hr_manager'];
 
 /**
  * Screens any signed-in employee may open even without the parent module's
@@ -60,6 +61,12 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     const allowed = coveredBasePaths(menuPermissions?.[session.role] ?? []);
     const base = '/' + (pathname.split('/')[1] ?? '');
     if (base !== '/' && !allowed.has(base)) {
+      router.replace('/');
+      return;
+    }
+    // 대장은 전 직원을 한 화면에 놓고 다루는 관리 도구입니다. 자료는 이미
+    // 서버에서 본인 것만 내려오지만, 화면 자체를 열 이유가 없습니다.
+    if (!HR_ROLES.includes(session.role) && isHrOnlyPath(pathname)) {
       router.replace('/');
     }
   }, [hydrated, session, pathname, router, menuPermissions, permissionsLoaded]);

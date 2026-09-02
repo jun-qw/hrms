@@ -11,6 +11,7 @@
 import { and, asc, desc, eq, gte, isNull, lte, or } from 'drizzle-orm';
 import { db, schema } from '@/lib/db';
 import { getSession } from '@/lib/auth/session';
+import { recordAudit } from './audit';
 import type { PayMethod } from '@/types';
 
 const HR_ROLES = ['admin', 'hr_manager'];
@@ -206,6 +207,11 @@ export async function setSalaries(inputs: SalaryInput[]): Promise<SalarySaveResu
     }
 
     await syncCurrentSalaries();
+    await recordAudit({
+      action: 'update', targetType: 'employee.salary',
+      targetLabel: `급여 기준액 ${saved}건 저장`,
+      details: { saved, failed: failed.length, effectiveFrom: inputs[0]?.effectiveFrom },
+    });
     return { ok: true, saved, failed };
   } catch (err) {
     console.error('setSalaries failed:', err);
@@ -221,6 +227,7 @@ export async function setSalaries(inputs: SalaryInput[]): Promise<SalarySaveResu
  */
 export async function syncCurrentSalaries(): Promise<number> {
   try {
+    await assertHr();
     const now = today();
     const current = await db
       .select()

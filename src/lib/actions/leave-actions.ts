@@ -14,6 +14,7 @@
 import { and, eq } from 'drizzle-orm';
 import { db, schema } from '@/lib/db';
 import { getSession } from '@/lib/auth/session';
+import { filterScoped, readScope } from './read-scope';
 import { toApp, toDb, camelToSnake } from './mappers';
 import type {
   LeaveType,
@@ -219,7 +220,9 @@ export interface LeaveModuleData {
 
 export async function fetchLeaveData(): Promise<LeaveModuleData | null> {
   try {
-    await assertRead();
+    // 휴가 잔액과 신청 사유는 개인 사정이 드러납니다. 인사 담당이 아니면
+    // 자기 것만 봅니다. 휴가 종류는 공통이라 그대로 둡니다.
+    const scope = await readScope();
     const [types, balances, requests, adjustments, plans, alerts] = await Promise.all([
       db.select().from(schema.leaveTypes),
       db.select().from(schema.leaveBalances),
@@ -230,11 +233,11 @@ export async function fetchLeaveData(): Promise<LeaveModuleData | null> {
     ]);
     return {
       leaveTypes: types.map(rowToLeaveType),
-      leaveBalances: balances.map(rowToBalance),
-      leaveRequests: requests.map(rowToRequest),
-      balanceAdjustments: adjustments.map(rowToAdjustment),
-      plans: plans.map(rowToPlan),
-      alerts: alerts.map(rowToAlert),
+      leaveBalances: filterScoped(scope, balances, (r) => r.employeeId).map(rowToBalance),
+      leaveRequests: filterScoped(scope, requests, (r) => r.employeeId).map(rowToRequest),
+      balanceAdjustments: filterScoped(scope, adjustments, (r) => r.employeeId).map(rowToAdjustment),
+      plans: filterScoped(scope, plans, (r) => r.employeeId).map(rowToPlan),
+      alerts: filterScoped(scope, alerts, (r) => r.employeeId).map(rowToAlert),
     };
   } catch (err) {
     console.error('fetchLeaveData failed:', err);

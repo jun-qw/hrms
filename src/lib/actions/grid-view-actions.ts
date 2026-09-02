@@ -15,7 +15,10 @@ import type { GridViewState, SavedGridView } from '@/components/grid/types';
 async function currentUserId(): Promise<string | null> {
   if (process.env.AUTH_MODE !== 'db') return null;
   const session = await getSession();
-  return session?.userId ?? null;
+  // 화면 배치는 사람마다 다르므로 세션이 없으면 누구의 배치인지 정할 수 없습니다.
+  // 예전에는 null 로 흘려보내 익명 배치가 만들어졌습니다.
+  if (!session) throw new Error('unauthorized');
+  return session.userId ?? null;
 }
 
 function toApp(row: typeof schema.gridViews.$inferSelect): SavedGridView {

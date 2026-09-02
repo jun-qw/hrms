@@ -29,6 +29,9 @@ async function assertAdmin(): Promise<void> {
 
 export async function listBrandingAssets(): Promise<BrandingAssetMeta[]> {
   try {
+    // 로고 목록은 회사 내부 자료입니다. 로그인 화면이 쓰는 것은
+    // getPublicBranding 쪽이라 여기를 막아도 로그인은 됩니다.
+    if (process.env.AUTH_MODE === 'db' && !(await getSession())) throw new Error('unauthorized');
     const rows = await db
       .select({
         kind: schema.brandingAssets.kind,
