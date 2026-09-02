@@ -139,9 +139,30 @@ export async function fetchEmployeeData(): Promise<EmployeeModuleData | null> {
 // Employee CRUD
 // ---------------------------------------------------------------------------
 
+/**
+ * 이 휴대폰 번호를 이미 쓰는 사람이 있는가.
+ *
+ * 근태기록은 휴대폰 번호로만 직원을 찾습니다. 번호가 겹치면 그 근태를 누구
+ * 것으로 붙일지 판정할 수 없으므로, 화면에서 막기 전에 여기서 먼저 막습니다.
+ * 표기가 제각각이라 숫자만 남긴 형태로 비교합니다.
+ */
+async function phoneTakenBy(phone: string | null | undefined, exceptId?: string): Promise<string | null> {
+  const key = String(phone ?? '').replace(/D/g, '');
+  if (!key) return null;
+  const rows = await db
+    .select({ id: schema.employees.id, name: schema.employees.name, phone: schema.employees.phone })
+    .from(schema.employees);
+  const clash = rows.find(
+    (r) => r.id !== exceptId && String(r.phone ?? '').replace(/D/g, '') === key,
+  );
+  return clash ? clash.name : null;
+}
+
 export async function createEmployee(employee: Employee): Promise<Employee | null> {
   try {
     await assertHrWrite();
+    const taken = await phoneTakenBy(employee.phone);
+    if (taken) throw new Error(`휴대폰 번호를 ${taken} 님이 이미 쓰고 있습니다.`);
     const values = toDb(employee as unknown as Record<string, unknown>, { dropId: true });
     const [row] = await db
       .insert(schema.employees)
@@ -177,6 +198,10 @@ export async function updateEmployee(
 ): Promise<Employee | null> {
   try {
     await assertEmployeeWrite(id);
+    if (patch.phone !== undefined) {
+      const taken = await phoneTakenBy(patch.phone, id);
+      if (taken) throw new Error(`휴대폰 번호를 ${taken} 님이 이미 쓰고 있습니다.`);
+    }
     const values = toDb(patch as Record<string, unknown>, { dropId: true });
     const [row] = await db
       .update(schema.employees)

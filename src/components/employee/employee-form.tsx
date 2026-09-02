@@ -25,7 +25,14 @@ const employeeSchema = z.object({
   name: z.string().min(1, '이름을 입력하세요'),
   name_en: z.string().optional(),
   email: z.string().email('올바른 이메일 형식이 아닙니다.').or(z.literal('')).optional(),
-  phone: z.string().optional(),
+  // 근태기록에는 사원번호가 없고 휴대폰 번호가 필수 항목입니다. 번호가 비면
+  // 그 사람의 근태를 시스템에 붙일 방법이 없어 급여까지 비어서 나갑니다.
+  phone: z
+    .string()
+    .min(1, '휴대폰 번호를 입력하세요. 근태기록을 직원에게 붙이는 유일한 열쇠입니다.')
+    .refine((v) => /^01[016789]d{7,8}$/.test(v.replace(/D/g, '')), {
+      message: '휴대폰 번호 형식이 아닙니다. 예: 010-1234-5678',
+    }),
   birth_date: z.string().optional(),
   gender: z.enum(['M', 'F']).optional(),
   address: z.string().optional(),
@@ -139,13 +146,20 @@ export function EmployeeForm({
             <Input id="name_en" {...register('name_en')} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="email">이메일 *</Label>
+            <Label htmlFor="email">이메일</Label>
             <Input id="email" type="email" {...register('email')} />
             {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="phone">전화번호</Label>
+            <Label htmlFor="phone">휴대폰 번호 *</Label>
             <Input id="phone" {...register('phone')} placeholder="010-0000-0000" />
+            {errors.phone ? (
+              <p className="text-xs text-destructive">{errors.phone.message}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                근태기록에는 사원번호가 없어 이 번호로 직원을 찾습니다. 비어 있으면 근태가 들어오지 않습니다.
+              </p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="birth_date">생년월일</Label>

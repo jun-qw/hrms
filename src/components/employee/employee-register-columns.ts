@@ -260,7 +260,9 @@ export function buildRegisterColumns(deps: ColumnDeps): GridColumn<Employee>[] {
     },
 
     // ── 연락처 ──
-    { id: 'phone', header: '휴대전화', width: 122, hidden: true, filter: 'text', value: (e) => e.phone, edit: { field: 'phone', parse: text } },
+    // 근태기록에는 사원번호가 없고 휴대폰 번호로 직원을 찾습니다. 비면 그 사람의
+    // 근태가 들어오지 않으므로 기본으로 보이게 두고, 비어 있으면 눈에 띄게 합니다.
+    { id: 'phone', header: '휴대폰 번호', width: 128, filter: 'text', value: (e) => e.phone ?? '미등록', edit: { field: 'phone', parse: text } },
     { id: 'email', header: '회사 이메일', width: 210, hidden: true, filter: 'text', value: (e) => e.email },
     { id: 'address', header: '주소', width: 240, hidden: true, filter: 'text', value: (e) => e.address, edit: { field: 'address', parse: text } },
     { id: 'emergency_contact_name', header: '비상연락자', width: 100, hidden: true, value: (e) => e.emergency_contact_name, edit: { field: 'emergency_contact_name', parse: text } },

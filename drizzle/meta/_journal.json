@@ -99,6 +99,13 @@
       "when": 1788303598335,
       "tag": "0013_add_employee_salaries",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1788307200000,
+      "tag": "0014_phone_unique",
+      "breakpoints": true
     }
   ]
 }

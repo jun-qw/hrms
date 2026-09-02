@@ -60,6 +60,11 @@ Keep Settings itself and the Audit log restricted to system administrators.
    the holiday-work premium directly. Miss one and work on that day is costed as
    an ordinary weekday.
 
+> **Always fill in the mobile number.** Attendance records carry no employee
+> number — the mobile number is a required field there, and it is the only key
+> that ties attendance to a person. Two people cannot share a number: the save
+> is rejected, because there would be no way to tell whose attendance it is.
+
 ### 2-2. Load the staff data
 
 **Employees › Data import (데이터 가져오기)** — system administrator only.
@@ -98,6 +103,29 @@ history.
 ---
 
 ## 3. Every month
+
+### 3-1. Record and close attendance
+
+**Attendance › Bulk import (일괄 등록)** takes a whole table pasted from a
+time clock or a spreadsheet; CSV and TSV files work too.
+
+1. Paste the table. Columns are matched from the header row; correct them on
+   screen if needed. Mobile number and date are required.
+2. **확인하기 (Check)** classifies every line as new, updated, unchanged, or
+   an error.
+3. Save. Error lines are skipped, not the whole file.
+
+> **People are matched by mobile number**, because attendance records carry no
+> employee number. Anyone missing a number, or sharing one, is listed at the top
+> of the screen. Fix those under **Employees** first — otherwise their
+> attendance never lands, and for hourly staff that means zero base pay.
+
+If there is no hours column, hours are derived from clock in/out, less the
+statutory break (근로기준법 제54조: one hour over 8, thirty minutes over 4).
+Switch that off if your device already deducts the break.
+
+To fix a single person, use **Attendance › Register (근태대장)** and edit the
+cell directly.
 
 ### 3-1. Close attendance
 
