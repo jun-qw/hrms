@@ -275,6 +275,18 @@ export function EmployeeRegister() {
         bulkActions={(selected, clear) =>
           selected.length > 0 ? (
             <div className="flex items-center gap-1.5">
+              {/* 행 하나를 고르면 상세로 갑니다. 행 끝의 ↗ 아이콘은 있는 줄
+                  모르는 사람이 대부분이라, 체크하면 눈앞의 액션바에 뜨는
+                  버튼을 정문으로 삼습니다. */}
+              {selected.length === 1 && (
+                <Button
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={() => router.push(`/employees/${selected[0].id}`)}
+                >
+                  {selected[0].name} 상세 보기
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"

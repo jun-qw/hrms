@@ -4,8 +4,6 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
-  HelpCircle,
-  X,
   LayoutDashboard,
   UserCircle,
   Network,
@@ -326,6 +324,14 @@ function GuideItem({
 
 export function HelpWorkflow() {
   const [open, setOpen] = useState(false);
+
+  // 헤더의 ? 버튼이 이 이벤트로 엽니다. 트리거와 패널이 다른 컴포넌트에 있어
+  // 전역 이벤트 하나로 잇습니다 — 컨텍스트를 만들 만큼의 관계가 아닙니다.
+  useEffect(() => {
+    const openHelp = () => setOpen(true);
+    window.addEventListener('open-help', openHelp);
+    return () => window.removeEventListener('open-help', openHelp);
+  }, []);
   const [search, setSearch] = useState('');
   const pathname = usePathname();
   const router = useRouter();
@@ -368,24 +374,9 @@ export function HelpWorkflow() {
 
   return (
     <>
-      {/* Floating button */}
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className={cn(
-          'liquid-glass fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full transition-transform hover:scale-105 active:scale-95',
-          !open && 'help-pulse'
-        )}
-        aria-label="업무 도움말"
-      >
-        {open ? (
-          <X className="h-6 w-6 text-foreground" />
-        ) : (
-          <HelpCircle className="h-6 w-6 text-foreground" />
-        )}
-      </button>
-
-      {/* Sheet panel */}
+      {/* Sheet panel — 여는 버튼은 헤더에 있습니다. 예전에는 화면 오른쪽
+          아래에 떠 있었는데, 폼의 저장·수정 버튼이 정확히 그 자리라 겹쳐서
+          버튼을 못 누르는 화면이 나왔습니다. */}
       <Sheet open={open} onOpenChange={handleOpenChange}>
         <SheetContent
           side="right"

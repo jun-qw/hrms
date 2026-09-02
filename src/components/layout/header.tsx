@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LogOut, Search, User } from 'lucide-react';
+import { LogOut, Search, User, HelpCircle } from 'lucide-react';
 import { openCommandPalette } from '@/components/layout/command-palette';
 import { NotificationBell } from '@/components/layout/notification-bell';
 import { LanguageToggle } from '@/components/layout/language-toggle';
@@ -43,6 +43,15 @@ export function Header() {
       </Button>
       <div className="flex items-center gap-4">
         <LanguageToggle />
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new Event('open-help'))}
+          className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          aria-label="업무 도움말"
+          title="업무 도움말"
+        >
+          <HelpCircle className="h-[17px] w-[17px]" />
+        </button>
         <NotificationBell />
         {user && (
           <DropdownMenu>

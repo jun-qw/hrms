@@ -19,6 +19,7 @@ import { useCodeMap, CODE } from '@/lib/hooks/use-code';
 import { isCurrentlyEffective } from '@/lib/utils/effective-status';
 import { DEFAULT_PAY_METHOD, JOB_CLASS_LABEL, PAY_METHOD_LABEL } from '@/types';
 import { isMobileNumber } from '@/lib/attendance/import-parse';
+import { toast } from 'sonner';
 import type { Employee, PositionRank, PositionTitle, Department } from '@/types';
 
 const employeeSchema = z.object({
@@ -48,6 +49,12 @@ const employeeSchema = z.object({
   job_class: z.enum(['office', 'field_manager', 'field']),
   pay_method: z.enum(['monthly', 'annual', 'hourly', 'daily']),
   hire_date: z.string().min(1, '입사일을 입력하세요'),
+  // DB의 numeric 컬럼은 문자열("2400000")로 옵니다. 게다가 급여방식에 따라
+  // 한쪽 필드는 화면에 뜨지 않아 valueAsNumber 를 거치지 못하고 문자열
+  // 기본값 그대로 제출됩니다. z.number() 는 그걸 조용히 거부해 — 오류 문구를
+  // 그리는 자리도 없어서 — 저장 버튼이 아무 반응 없는 것처럼 보였습니다.
+  // 화면에 뜨는 쪽은 valueAsNumber 가, 뜨지 않는 쪽은 위의 Number() 기본값이
+  // 숫자를 보장합니다. coerce 를 쓰지 않는 것은 RHF 타입 추론과 충돌해서입니다.
   base_salary: z.number().min(0).optional(),
   hourly_wage: z.number().min(0).optional(),
   bank_name: z.string().optional(),
@@ -104,8 +111,8 @@ export function EmployeeForm({
           job_class: employee.job_class ?? 'office',
           pay_method: employee.pay_method ?? 'monthly',
           hire_date: employee.hire_date,
-          base_salary: employee.base_salary ?? 0,
-          hourly_wage: employee.hourly_wage ?? 0,
+          base_salary: Number(employee.base_salary ?? 0),
+          hourly_wage: Number(employee.hourly_wage ?? 0),
           bank_name: employee.bank_name ?? '',
           bank_account: employee.bank_account ?? '',
           emergency_contact_name: employee.emergency_contact_name ?? '',
@@ -126,8 +133,26 @@ export function EmployeeForm({
   const payMethod = watch('pay_method');
   const isHourlyLike = payMethod === 'hourly' || payMethod === 'daily';
 
+  /**
+   * 검증 실패를 소리 내어 알립니다.
+   *
+   * 실제로 있었던 일입니다 — 화면에 뜨지 않은 필드가 검증에 걸리자 저장
+   * 버튼이 아무 반응이 없었습니다. 오류를 그릴 자리가 없는 필드라도, 왜 저장이
+   * 안 되는지는 담당자에게 보여야 합니다.
+   */
+  const FIELD_LABELS: Record<string, string> = {
+    employee_number: '사원번호', name: '이름', email: '이메일', phone: '휴대폰 번호',
+    hire_date: '입사일', base_salary: '기본급', hourly_wage: '시급',
+    employment_type: '고용형태', job_class: '직군', pay_method: '급여방식', gender: '성별',
+  };
+  const onInvalid = (errs: Record<string, { message?: string }>) => {
+    const [field, err] = Object.entries(errs)[0] ?? [];
+    if (!field) return;
+    toast.error(`${FIELD_LABELS[field] ?? field}: ${err?.message ?? '입력값을 확인하세요.'}`);
+  };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-6">
       {/* 기본 정보 */}
       <Card>
         <CardHeader>
@@ -281,6 +306,7 @@ export function EmployeeForm({
             <div className="space-y-2">
               <Label htmlFor="hourly_wage">{payMethod === 'daily' ? '일급' : '시급'}</Label>
               <Input id="hourly_wage" type="number" {...register('hourly_wage', { valueAsNumber: true })} />
+              {errors.hourly_wage && <p className="text-xs text-destructive">{errors.hourly_wage.message}</p>}
               <p className="text-xs text-muted-foreground">
                 근태 실근로시간에 곱해 기본급이 산정됩니다.
               </p>
@@ -289,6 +315,7 @@ export function EmployeeForm({
             <div className="space-y-2">
               <Label htmlFor="base_salary">기본급 (월)</Label>
               <Input id="base_salary" type="number" {...register('base_salary', { valueAsNumber: true })} />
+              {errors.base_salary && <p className="text-xs text-destructive">{errors.base_salary.message}</p>}
             </div>
           )}
         </CardContent>
