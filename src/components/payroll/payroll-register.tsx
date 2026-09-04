@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { AlertTriangle } from 'lucide-react';
@@ -10,6 +10,10 @@ import { cn } from '@/lib/utils';
 import { DataGrid } from '@/components/grid/data-grid';
 import type { GridColumn } from '@/components/grid/types';
 import { usePayrollStore } from '@/lib/stores/payroll-store';
+import { resolveRateSet } from '@/lib/actions/payroll-rate-actions';
+import { DEFAULT_RATE_SET, rateSetForMonth, type PayrollRateSet } from '@/lib/payroll/rate-set';
+import { calculateInsurance } from '@/lib/utils/insurance';
+import { calculateMonthlyIncomeTax } from '@/lib/utils/korean-tax';
 import { useEmployeeStore } from '@/lib/stores/employee-store';
 import type { SavedPayroll } from '@/types';
 
@@ -60,8 +64,81 @@ export function PayrollRegister({ year, month }: { year: number; month: number |
   const employees = useEmployeeStore((s) => s.employees);
   const departments = useEmployeeStore((s) => s.departments);
 
+  const savePayroll = usePayrollStore((s) => s.savePayroll);
   const [groupByDept, setGroupByDept] = useState(false);
   const [onlyVariance, setOnlyVariance] = useState(false);
+
+  // 셀을 고치면 4대보험·소득세를 다시 계산해야 하므로 그 해 기준값을 받아 둡니다.
+  const [rates, setRates] = useState<PayrollRateSet>(DEFAULT_RATE_SET);
+  useEffect(() => {
+    let alive = true;
+    resolveRateSet(year).then((r) => { if (alive) setRates(r.rates); });
+    return () => { alive = false; };
+  }, [year]);
+
+  /**
+   * 지급 항목 셀 인라인 편집.
+   *
+   * 담당자가 대장에서 바로 고치는 것은 연장수당 같은 지급 항목입니다. 금액
+   * 하나를 바꾸면 과세소득이 바뀌고, 4대보험과 소득세가 따라 바뀝니다 —
+   * 지급계만 고치고 공제를 그대로 두면 실수령액이 거짓말이 됩니다. 그래서
+   * 셀 하나를 고쳐도 법정 공제 여섯 줄을 전부 다시 계산해 저장합니다.
+   *
+   * 확정·지급완료 건은 고칠 수 없습니다. 대장은 지급의 근거 서류라, 지급된
+   * 금액이 화면에서 바뀌면 서류로서 죽습니다.
+   */
+  const handleEditEarning = async (rowId: string, itemName: string, raw: unknown) => {
+    const payroll = savedPayrolls.find((p) => p.id === rowId);
+    if (!payroll) return;
+    if (payroll.status !== 'draft') {
+      toast.error('확정된 급여는 대장에서 고칠 수 없습니다. 먼저 확정을 해제하세요.');
+      return;
+    }
+    const amount = Math.round(Number(String(raw).replace(/[,s원]/g, '')) || 0);
+    if (amount < 0) { toast.error('금액은 0 이상이어야 합니다.'); return; }
+
+    const monthRates = rateSetForMonth(rates, payroll.year, payroll.month);
+    const items = payroll.items.map((it) =>
+      it.category === 'earning' && it.name === itemName
+        ? { ...it, amount, formula: '대장에서 직접 수정' }
+        : { ...it },
+    );
+
+    const totalEarnings = items
+      .filter((it) => it.category === 'earning')
+      .reduce((sum, it) => sum + it.amount, 0);
+    const taxable = items
+      .filter((it) => it.category === 'earning' && it.is_taxable)
+      .reduce((sum, it) => sum + it.amount, 0);
+
+    const ins = calculateInsurance(taxable, monthRates);
+    const tax = calculateMonthlyIncomeTax(taxable, payroll.dependents ?? 1, monthRates);
+    const statutory: Record<string, number> = {
+      국민연금: ins.nationalPension,
+      건강보험: ins.healthInsurance,
+      장기요양보험: ins.longTermCare,
+      고용보험: ins.employmentInsurance,
+      소득세: tax.incomeTax,
+      지방소득세: tax.localTax,
+    };
+    for (const it of items) {
+      if (it.category === 'deduction' && statutory[it.name] !== undefined) {
+        it.amount = statutory[it.name];
+      }
+    }
+    const totalDeductions = items
+      .filter((it) => it.category === 'deduction')
+      .reduce((sum, it) => sum + it.amount, 0);
+
+    savePayroll({
+      ...payroll,
+      items,
+      total_earnings: totalEarnings,
+      total_deductions: totalDeductions,
+      net_pay: totalEarnings - totalDeductions,
+    });
+    toast.success(`${itemName}을 고치고 공제를 다시 계산했습니다.`);
+  };
 
   const { rows, earningNames, deductionNames } = useMemo(() => {
     const inPeriod = savedPayrolls.filter(
@@ -144,7 +221,20 @@ export function PayrollRegister({ year, month }: { year: number; month: number |
       { id: 'name', header: '성명', width: 84, pinned: true, filter: 'text', value: (r) => r.name },
       { id: 'department', header: '부서', width: 118, filter: 'text', value: (r) => r.department },
 
-      ...earningNames.map((name) => money(`e:${name}`, name, (r) => r.earnings.get(name) ?? 0)),
+      // 지급 항목은 작성중 상태에서 두 번 눌러 고칠 수 있습니다. 법정 공제는
+      // 자동 재계산 대상이라 편집을 열지 않습니다.
+      ...earningNames.map((name): GridColumn<RegisterRow> => ({
+        ...money(`e:${name}`, name, (r) => r.earnings.get(name) ?? 0),
+        edit: {
+          field: `e:${name}`,
+          parse: (raw: string) => {
+            const n = Number(String(raw).replace(/[,s원]/g, ''));
+            return Number.isFinite(n) && n >= 0
+              ? { ok: true as const, value: Math.round(n) }
+              : { ok: false as const, error: '0 이상의 숫자를 넣으세요.' };
+          },
+        },
+      })),
       money('totalEarnings', '지급계', (r) => r.totalEarnings),
 
       ...deductionNames.map((name) => money(`d:${name}`, name, (r) => r.deductions.get(name) ?? 0)),
@@ -187,9 +277,27 @@ export function PayrollRegister({ year, month }: { year: number; month: number |
   }, [earningNames, deductionNames]);
 
   const periodLabel = month === 'all' ? `${year}년 전체` : `${year}년 ${month}월`;
+  const confirmedCount = rows.filter((r) => r.status !== 'draft').length;
 
   return (
     <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        <Badge
+          variant="outline"
+          className={cn(
+            'tabular-nums',
+            confirmedCount === rows.length && rows.length > 0
+              ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
+              : 'border-amber-300 bg-amber-50 text-amber-800',
+          )}
+        >
+          확정 {confirmedCount} / {rows.length}명
+        </Badge>
+        <span>
+          지급 항목 셀은 <strong>작성중</strong> 상태에서 두 번 눌러 바로 고칠 수 있습니다.
+          고치면 4대보험·소득세가 다시 계산됩니다.
+        </span>
+      </div>
       {flaggedCount > 0 && (
         <div className="flex items-center gap-2 rounded-md border border-accent-amber/40 bg-accent-amber-subtle px-3 py-2 text-xs">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-accent-amber" />
@@ -214,6 +322,13 @@ export function PayrollRegister({ year, month }: { year: number; month: number |
         columns={columns}
         rows={visibleRows}
         rowLabel={(r) => `${r.name} (${r.employeeNumber})`}
+        onEdit={async (patches) => {
+          for (const patch of patches) {
+            // 열 id 가 'e:연장수당' 꼴이므로 항목명을 되찾습니다.
+            if (!patch.field.startsWith('e:')) continue;
+            await handleEditEarning(String(patch.rowId), patch.field.slice(2), patch.value);
+          }
+        }}
         groupBy={groupByDept ? { columnId: 'department', label: (r) => r.department } : undefined}
         onOpenRow={(r) => router.push(`/payroll/payslip/${r.id}`)}
         exportSubtitle={`${periodLabel} · ${visibleRows.length}명 · 지급 항목 ${earningNames.length} / 공제 항목 ${deductionNames.length}`}
