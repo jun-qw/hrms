@@ -283,7 +283,7 @@ export const brandingAssets = pgTable('branding_assets', {
 /**
  * A named column/filter/sort combination for one grid. Rows are per user
  * unless `isShared` is set, in which case everyone in the tenant sees them —
- * that is how an HR lead publishes a house layout (예: 법정 노동자명부) to
+ * that is how an HR lead publishes a house layout (예: 법정 작업자 명부) to
  * the rest of the team.
  *
  * `state` holds the serialised grid state (visible columns and their order,

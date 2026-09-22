@@ -11,7 +11,7 @@ import { useSettingsStore } from '@/lib/stores/settings-store';
 import type { Employee } from '@/types';
 
 /**
- * 노동자명부 (근로기준법 제41조 · 시행령 제20조).
+ * 작업자 명부 (근로기준법 제41조 · 시행령 제20조).
  *
  * 화면용 인력대장과 서식을 분리한 이유는 목적이 다르기 때문입니다. 대장은 담당자가
  * 보고 고치는 작업대이고, 이 화면은 근로감독·노무 실사에 그대로 제출하는 종이입니다.
@@ -71,7 +71,7 @@ export default function WorkerRosterPage() {
         <Breadcrumb />
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.025em] text-ink-900">노동자명부</h1>
+            <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.025em] text-ink-900">작업자 명부</h1>
             <p className="mt-0.5 text-sm text-muted-foreground">
               근로기준법 제41조에 따른 법정 서식입니다. 기재사항이 고정되어 있어 열을 바꿀 수
               없습니다. 3년간 보존해야 합니다.

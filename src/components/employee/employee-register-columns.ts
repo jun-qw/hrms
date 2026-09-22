@@ -80,7 +80,7 @@ export const REGISTER_PRESETS: RegisterPreset[] = [
   },
   {
     id: 'roster',
-    name: '노동자명부',
+    name: '작업자 명부',
     hint: '근로기준법 제41조 서식',
     columns: ['name', 'gender', 'birth_date', 'address', 'department', 'title', 'hire_date', 'employment_type', 'resignation_date', 'status'],
   },

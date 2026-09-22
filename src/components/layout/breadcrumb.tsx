@@ -8,7 +8,7 @@ const pathLabels: Record<string, string> = {
   organization: '조직도',
   departments: '부서',
   employees: '인력대장',
-  roster: '노동자명부',
+  roster: '작업자 명부',
   pipeline: '입퇴사 진행',
   retirement: '퇴직 관리',
   'workplace-assignment': '사업장 배정',

@@ -54,7 +54,7 @@ export const en: Record<keyof typeof ko, string> = {
   'menu.home': 'Home',
   'menu.workforce': 'Workforce',
   'menu.timeAndLeave': 'Time & Leave',
-  'menu.roster': 'Employee register',
+  'menu.roster': 'Worker roster',
   'menu.pipeline': 'Joiners & leavers',
   'menu.retirement': 'Offboarding',
   'menu.workplaceAssignment': 'Worksite assignment',

@@ -51,7 +51,7 @@ export const ko = {
   'menu.home': '홈',
   'menu.workforce': '인력관리',
   'menu.timeAndLeave': '근태·휴가',
-  'menu.roster': '인력대장',
+  'menu.roster': '작업자 명부',
   'menu.pipeline': '입사·퇴사',
   'menu.retirement': '퇴직정산',
   'menu.workplaceAssignment': '사업장 배치',

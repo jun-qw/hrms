@@ -123,7 +123,7 @@ function EmployeesPageBody() {
                   <DropdownMenuItem asChild>
                     <Link href="/employees/roster">
                       <ScrollText className="h-3.5 w-3.5" />
-                      노동자명부
+                      작업자 명부
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
