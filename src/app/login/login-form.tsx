@@ -85,7 +85,7 @@ export function LoginForm({ mode }: LoginFormProps) {
               <BrandMark size={24} className="text-primary-foreground" />
             </div>
           )}
-          <h1 className="text-2xl font-bold tracking-tight">{branding.app_name || 'HRMS'}</h1>
+          <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.025em] text-ink-900">{branding.app_name || 'HRMS'}</h1>
           <p className="text-sm text-muted-foreground">{branding.login_tagline || t('subtitle')}</p>
         </div>
 

@@ -256,7 +256,7 @@ export default function PayrollSettingsPage() {
     <div>
       <Breadcrumb />
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">개인별 급여 기준정보 관리</h1>
+        <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.025em] text-ink-900">개인별 급여 기준정보 관리</h1>
         <div className="flex gap-2">
           <Link href="/payroll">
             <Button variant="outline"><ArrowLeft className="h-4 w-4 mr-2" />급여관리</Button>

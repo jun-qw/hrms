@@ -950,7 +950,7 @@ export default function MyPage() {
     return (
       <div>
         <Breadcrumb />
-        <h1 className="text-2xl font-bold mb-6">마이페이지</h1>
+        <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.025em] text-ink-900 mb-6">마이페이지</h1>
         <Card>
           <CardContent className="pt-6 text-center text-muted-foreground">
             <p>이 계정은 사원 정보와 연결되어 있지 않습니다.</p>
@@ -994,7 +994,7 @@ export default function MyPage() {
   return (
     <div>
       <Breadcrumb />
-      <h1 className="text-2xl font-bold mb-6">마이페이지</h1>
+      <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.025em] text-ink-900 mb-6">마이페이지</h1>
 
       {/* Profile Card */}
       <Card className="mb-6">

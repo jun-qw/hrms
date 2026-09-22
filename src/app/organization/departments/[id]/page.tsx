@@ -45,7 +45,7 @@ export default function DepartmentDetailPage({ params }: { params: Promise<{ id:
       <Breadcrumb />
       <div className="flex items-center gap-3 mb-6">
         <Building2 className="h-6 w-6" />
-        <h1 className="text-2xl font-bold">{dept.name}</h1>
+        <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.025em] text-ink-900">{dept.name}</h1>
         <Badge variant="outline">{dept.code}</Badge>
       </div>
 

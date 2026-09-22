@@ -118,7 +118,7 @@ export default function AuditLogPage() {
   return (
     <div>
       <Breadcrumb />
-      <h1 className="text-2xl font-bold mb-6">감사로그</h1>
+      <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.025em] text-ink-900 mb-6">감사로그</h1>
 
       {/* Stats cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">

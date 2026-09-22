@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Fraunces, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -13,15 +13,27 @@ import { BrandingApplier } from '@/components/layout/branding-applier';
 import { getPublicBranding } from '@/lib/actions/branding-actions';
 import { getSession } from '@/lib/auth/session';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+/**
+ * 글꼴 — 디자인 시안을 따릅니다.
+ *
+ * 제목은 Fraunces(세리프), 숫자·코드는 JetBrains Mono. 둘은 빌드 때 받아
+ * 함께 배포하므로 사내망 PC에 인터넷이 없어도 나옵니다. 본문 Pretendard는
+ * 구글 폰트에 없어 CDN에서 받고, 못 받으면 시스템 한글 글꼴로 내려갑니다.
+ */
+const fraunces = Fraunces({
+  variable: '--font-fraunces',
+  subsets: ['latin'],
+  style: ['normal', 'italic'],
+  axes: ['opsz', 'SOFT'],
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  variable: '--font-jetbrains',
   subsets: ['latin'],
 });
 
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-});
+const PRETENDARD_CSS =
+  'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css';
 
 /**
  * Every route is session-driven and reads the database, so nothing is
@@ -53,7 +65,11 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <head>
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
+        <link rel="stylesheet" href={PRETENDARD_CSS} />
+      </head>
+      <body className={`${fraunces.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
         <NextIntlClientProvider>
           <TooltipProvider>
             <SessionSync

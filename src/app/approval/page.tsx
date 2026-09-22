@@ -117,7 +117,7 @@ export default function ApprovalPage() {
   return (
     <div>
       <Breadcrumb />
-      <h1 className="text-2xl font-bold mb-6">전자결재</h1>
+      <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.025em] text-ink-900 mb-6">전자결재</h1>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <StatsCard title="전체" value={totalCount} icon={FileText} color="blue" />

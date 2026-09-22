@@ -59,7 +59,7 @@ export default function DataImportPage() {
     return (
       <div>
         <Breadcrumb />
-        <h1 className="text-2xl font-bold mb-4">데이터 가져오기</h1>
+        <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.025em] text-ink-900 mb-4">데이터 가져오기</h1>
         <p className="text-muted-foreground">이 기능은 시스템 관리자만 사용할 수 있습니다.</p>
       </div>
     );
@@ -157,7 +157,7 @@ export default function DataImportPage() {
     <div className="space-y-6">
       <Breadcrumb />
       <div>
-        <h1 className="text-2xl font-bold">데이터 가져오기</h1>
+        <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.025em] text-ink-900">데이터 가져오기</h1>
         <p className="text-sm text-muted-foreground mt-1">
           신규 도입 시 회사정보·조직도·인사정보를 엑셀 한 파일로 일괄 등록합니다.
         </p>

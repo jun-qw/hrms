@@ -148,7 +148,7 @@ export default function SettingsPage() {
     <div>
       <Breadcrumb />
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-        <h1 className="text-2xl font-bold">시스템 설정</h1>
+        <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.025em] text-ink-900">시스템 설정</h1>
         <Link href="/settings/data-import">
           <Button variant="outline" size="sm">
             <Upload className="mr-1.5 h-3.5 w-3.5" />

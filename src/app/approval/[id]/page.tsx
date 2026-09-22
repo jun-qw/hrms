@@ -253,7 +253,7 @@ export default function ApprovalDetailPage({ params }: { params: Promise<{ id: s
     <div>
       <Breadcrumb />
       <div className="flex items-center gap-3 mb-6">
-        <h1 className="text-2xl font-bold">{approval.title}</h1>
+        <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.025em] text-ink-900">{approval.title}</h1>
         <Badge variant={approval.status === 'approved' ? 'default' : approval.status === 'rejected' ? 'destructive' : 'secondary'}>
           {statusLabel}
         </Badge>

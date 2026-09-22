@@ -238,18 +238,20 @@ export default function HomePage() {
 
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">이번 주 할 일</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h1 className="font-serif text-[30px] font-medium leading-[1.05] tracking-[-0.025em] text-ink-900">
+            이번 주 <em className="italic text-brand">할 일</em>
+          </h1>
+          <p className="mt-2 text-[13px] text-ink-500">
             {year}년 {month}월 · 재직 {active.length}명 · 급여 지급일 매월 {payDay}일
           </p>
         </div>
         {totalOpen === 0 ? (
-          <Badge variant="outline" className="border-emerald-300 bg-emerald-50 text-emerald-800">
+          <Badge variant="outline" className="border-transparent bg-success-tint text-success">
             <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
             밀린 일이 없습니다
           </Badge>
         ) : (
-          <Badge variant="outline" className="border-red-300 bg-red-50 text-red-800">
+          <Badge variant="outline" className="border-transparent bg-danger-tint text-danger">
             <AlertTriangle className="mr-1 h-3.5 w-3.5" />
             처리할 일 {totalOpen}건
           </Badge>
@@ -264,13 +266,13 @@ export default function HomePage() {
               <Card
                 className={cn(
                   'h-full transition-colors',
-                  urgent ? 'border-red-200 bg-red-50/40 hover:border-red-300' : 'hover:border-primary/40',
+                  urgent ? 'border-danger/30 bg-danger-tint/40 hover:border-danger/60' : 'hover:border-ink-300',
                 )}
               >
                 <CardContent className="space-y-3 pt-5">
                   <div className="flex items-center gap-2">
                     <card.icon
-                      className={cn('h-4 w-4', urgent ? 'text-red-600' : 'text-muted-foreground')}
+                      className={cn('h-4 w-4', urgent ? 'text-danger' : 'text-muted-foreground')}
                     />
                     <span className="text-sm font-semibold">{card.title}</span>
                   </div>
@@ -295,7 +297,7 @@ export default function HomePage() {
                               line.count === 0
                                 ? 'text-muted-foreground/40'
                                 : line.urgent
-                                  ? 'text-red-700'
+                                  ? 'text-danger'
                                   : 'text-foreground',
                             )}
                           >
@@ -311,7 +313,7 @@ export default function HomePage() {
                     ))}
                   </div>
 
-                  <div className="flex items-center gap-1 pt-1 text-xs text-primary opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="flex items-center gap-1 pt-1 text-xs text-brand opacity-0 transition-opacity group-hover:opacity-100">
                     {card.hrefLabel}
                     <ArrowRight className="h-3 w-3" />
                   </div>

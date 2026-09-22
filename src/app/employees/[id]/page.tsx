@@ -179,7 +179,9 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     <div>
       <Breadcrumb />
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">사원 상세</h1>
+        <h1 className="font-serif text-[30px] font-medium leading-[1.05] tracking-[-0.025em] text-ink-900">
+          {employee.name} <span className="text-[16px] text-ink-400">사원카드</span>
+        </h1>
         <div className="flex items-center gap-2">
           <Link href={`/employees/${id}/record-card`}>
             <Button variant="outline">

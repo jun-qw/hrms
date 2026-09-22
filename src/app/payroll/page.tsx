@@ -98,7 +98,7 @@ export default function PayrollPage() {
     <div>
       <Breadcrumb />
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">급여관리</h1>
+        <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.025em] text-ink-900">급여관리</h1>
         <div className="flex gap-2">
           <Link href="/payroll/salaries">
             <Button variant="outline" size="sm">

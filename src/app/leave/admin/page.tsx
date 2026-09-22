@@ -105,7 +105,7 @@ export default function LeaveAdminPage() {
   return (
     <div>
       <Breadcrumb />
-      <h1 className="text-2xl font-bold mb-6">휴가 관리 (HR)</h1>
+      <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.025em] text-ink-900 mb-6">휴가 관리 (HR)</h1>
 
       <Tabs defaultValue="pending">
         <TabsList>

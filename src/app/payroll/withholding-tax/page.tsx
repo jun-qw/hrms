@@ -119,7 +119,7 @@ export default function WithholdingTaxPage() {
       <div className="no-print">
         <Breadcrumb />
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">원천징수부</h1>
+          <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.025em] text-ink-900">원천징수부</h1>
           <div className="flex gap-2">
             <Link href="/my">
               <Button variant="outline"><ArrowLeft className="h-4 w-4 mr-2" />마이페이지</Button>

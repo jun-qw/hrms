@@ -71,7 +71,7 @@ export default function WorkerRosterPage() {
         <Breadcrumb />
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-xl font-bold tracking-tight">노동자명부</h1>
+            <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.025em] text-ink-900">노동자명부</h1>
             <p className="mt-0.5 text-sm text-muted-foreground">
               근로기준법 제41조에 따른 법정 서식입니다. 기재사항이 고정되어 있어 열을 바꿀 수
               없습니다. 3년간 보존해야 합니다.

@@ -1,0 +1,1074 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>TalentOS — 인사/조직 관리</title>
+<meta name="viewport" content="width=1440" />
+<link rel="preconnect" href="https://cdn.jsdelivr.net" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet">
+<style>
+  /* ---------- tokens ---------- */
+  :root {
+    --ink-900: #141210;
+    --ink-800: #1f1d1a;
+    --ink-700: #35322d;
+    --ink-500: #6b6660;
+    --ink-400: #918b83;
+    --ink-300: #b8b2a9;
+    --ink-200: #d9d4cc;
+    --ink-150: #e6e1d8;
+    --ink-100: #efeae1;
+    --paper:   #f7f5f1;
+    --paper-2: #fbf9f5;
+    --white:   #ffffff;
+
+    --accent:      #1E3A8A;   /* ink blue */
+    --accent-2:    #2a4bb0;
+    --accent-tint: #e5eaf6;
+    --gold:        #b58a2b;
+    --gold-tint:   #f4ecd6;
+    --success:     #2f6b4a;
+    --success-tint:#dfece5;
+    --danger:      #a3341f;
+    --danger-tint: #f2dcd6;
+    --warn:        #8a5a15;
+    --warn-tint:   #f5e6cd;
+
+    --r: 6px;
+    --r-lg: 10px;
+    --shadow-1: 0 1px 0 rgba(20,18,16,.04), 0 1px 2px rgba(20,18,16,.04);
+    --shadow-2: 0 8px 24px -8px rgba(20,18,16,.12), 0 2px 4px rgba(20,18,16,.04);
+
+    --serif: "Fraunces", ui-serif, Georgia, serif;
+    --sans:  "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    --mono:  "JetBrains Mono", ui-monospace, Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink-900); font-family: var(--sans); font-feature-settings: "ss01","tnum"; -webkit-font-smoothing: antialiased; }
+  body { min-width: 1440px; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+  input, select { font: inherit; color: inherit; }
+  a { color: inherit; text-decoration: none; }
+
+  .mono { font-family: var(--mono); font-feature-settings: "tnum" 1; }
+  .serif { font-family: var(--serif); font-optical-sizing: auto; letter-spacing: -0.01em; }
+
+  /* ---------- topbar ---------- */
+  .topbar {
+    display: flex; align-items: center; gap: 24px;
+    height: 56px; padding: 0 24px;
+    background: var(--white);
+    border-bottom: 1px solid var(--ink-150);
+    position: sticky; top: 0; z-index: 40;
+  }
+  .brand { display: flex; align-items: baseline; gap: 8px; }
+  .brand .mark {
+    width: 22px; height: 22px; border-radius: 4px;
+    background: var(--ink-900); color: var(--paper);
+    display: grid; place-items: center; font-family: var(--serif); font-weight: 600; font-size: 14px;
+    align-self: center;
+  }
+  .brand .name { font-family: var(--serif); font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
+  .brand .sub  { font-size: 11px; color: var(--ink-500); letter-spacing: 0.08em; text-transform: uppercase; margin-left: 6px; }
+
+  .nav { display: flex; gap: 2px; margin-left: 16px; }
+  .nav a {
+    padding: 8px 12px; font-size: 13.5px; color: var(--ink-500);
+    border-radius: var(--r); font-weight: 500;
+  }
+  .nav a.active { color: var(--ink-900); background: var(--ink-100); }
+  .nav a:hover:not(.active) { color: var(--ink-800); }
+
+  .topbar .spacer { flex: 1; }
+
+  .searchbar {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--paper); border: 1px solid var(--ink-150);
+    border-radius: var(--r); padding: 6px 10px; width: 280px;
+  }
+  .searchbar input { border: 0; outline: 0; background: transparent; width: 100%; font-size: 13px; }
+  .searchbar .kbd { font-family: var(--mono); font-size: 10.5px; color: var(--ink-500); border: 1px solid var(--ink-150); border-bottom-width: 2px; padding: 1px 5px; border-radius: 3px; }
+
+  .topbar .iconbtn { width: 32px; height: 32px; border-radius: var(--r); display: grid; place-items: center; color: var(--ink-500); }
+  .topbar .iconbtn:hover { background: var(--ink-100); color: var(--ink-900); }
+
+  .me { display: flex; align-items: center; gap: 10px; padding-left: 10px; margin-left: 6px; border-left: 1px solid var(--ink-150); }
+  .avatar { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-family: var(--serif); font-weight: 600; font-size: 12px; color: var(--white); background: var(--ink-800); letter-spacing: 0; }
+  .me .who { display: flex; flex-direction: column; }
+  .me .who .n { font-size: 12.5px; font-weight: 600; }
+  .me .who .r { font-size: 11px; color: var(--ink-500); }
+
+  /* ---------- page header ---------- */
+  .pageheader {
+    padding: 22px 28px 18px;
+    background: var(--paper);
+    border-bottom: 1px solid var(--ink-150);
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 24px;
+  }
+  .crumbs { font-size: 12px; color: var(--ink-500); letter-spacing: 0.02em; margin-bottom: 8px; }
+  .crumbs .sep { color: var(--ink-300); padding: 0 6px; }
+  .crumbs .cur { color: var(--ink-800); }
+  .pagetitle {
+    font-family: var(--serif); font-weight: 500; font-size: 34px;
+    letter-spacing: -0.025em; line-height: 1.05;
+  }
+  .pagetitle em { font-style: italic; font-weight: 500; color: var(--accent); }
+  .pagesub { margin-top: 6px; font-size: 13.5px; color: var(--ink-500); max-width: 620px; line-height: 1.5; }
+
+  .kpis { display: grid; grid-template-columns: repeat(4, minmax(120px, 1fr)); gap: 1px; background: var(--ink-150); border: 1px solid var(--ink-150); border-radius: var(--r-lg); overflow: hidden; }
+  .kpi { background: var(--white); padding: 12px 16px; min-width: 128px; }
+  .kpi .label { font-size: 11px; color: var(--ink-500); letter-spacing: 0.06em; text-transform: uppercase; }
+  .kpi .val { font-family: var(--serif); font-size: 24px; font-weight: 500; letter-spacing: -0.02em; margin-top: 2px; display: flex; align-items: baseline; gap: 6px; }
+  .kpi .val .u { font-family: var(--sans); font-size: 12px; color: var(--ink-500); font-weight: 500; letter-spacing: 0; }
+  .kpi .delta { font-family: var(--mono); font-size: 10.5px; margin-top: 2px; color: var(--ink-500); }
+  .kpi .delta.up { color: var(--success); }
+  .kpi .delta.down { color: var(--danger); }
+
+  /* ---------- workspace ---------- */
+  .workspace {
+    display: grid;
+    grid-template-columns: 260px 400px 1fr;
+    gap: 0;
+    background: var(--paper);
+    min-height: calc(100vh - 56px - 128px);
+  }
+  .panel { border-right: 1px solid var(--ink-150); background: var(--paper); }
+  .panel:last-child { border-right: 0; }
+
+  .panel-head {
+    display: flex; align-items: center; justify-content: space-between;
+    height: 44px; padding: 0 16px; border-bottom: 1px solid var(--ink-150);
+    background: var(--paper-2);
+  }
+  .panel-head .title { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-500); font-weight: 600; }
+  .panel-head .actions { display: flex; gap: 4px; }
+  .icon-btn { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 4px; color: var(--ink-500); }
+  .icon-btn:hover { background: var(--ink-100); color: var(--ink-900); }
+
+  /* ---- tree ---- */
+  .tree { padding: 8px 8px 20px; overflow: auto; }
+  .tree-search { padding: 8px 6px 10px; }
+  .tree-search input {
+    width: 100%; border: 1px solid var(--ink-150); background: var(--white);
+    padding: 7px 10px; border-radius: var(--r); font-size: 12.5px; outline: 0;
+  }
+  .tree-search input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
+
+  .tnode { user-select: none; }
+  .trow {
+    display: flex; align-items: center; gap: 4px;
+    padding: 5px 8px; border-radius: 4px;
+    font-size: 13px; cursor: pointer; color: var(--ink-800);
+  }
+  .trow:hover { background: var(--ink-100); }
+  .trow.selected { background: var(--ink-900); color: var(--paper); }
+  .trow.selected .count { color: var(--paper); opacity: .7; }
+  .trow .chev { width: 14px; height: 14px; display: grid; place-items: center; color: var(--ink-400); transition: transform .15s ease; flex: 0 0 14px; }
+  .trow .chev.open { transform: rotate(90deg); }
+  .trow .chev.hidden { visibility: hidden; }
+  .trow .ico { width: 16px; height: 16px; color: var(--ink-500); flex: 0 0 16px; }
+  .trow.selected .ico { color: var(--paper); }
+  .trow .lbl { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .trow .count { font-family: var(--mono); font-size: 10.5px; color: var(--ink-400); padding-left: 6px; }
+  .tchildren { margin-left: 14px; border-left: 1px dashed var(--ink-200); padding-left: 4px; display: none; }
+  .tchildren.open { display: block; }
+
+  /* ---- employee list ---- */
+  .list-filters {
+    display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+    border-bottom: 1px solid var(--ink-150); background: var(--paper);
+    flex-wrap: wrap;
+  }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 100px; font-size: 12px;
+    border: 1px solid var(--ink-150); background: var(--white); color: var(--ink-700);
+  }
+  .chip.on { background: var(--ink-900); color: var(--paper); border-color: var(--ink-900); }
+  .chip .x { color: var(--ink-400); font-family: var(--mono); }
+  .chip:hover:not(.on) { border-color: var(--ink-300); }
+
+  .emp-list { overflow: auto; }
+  .emp-list-hd {
+    display: grid; grid-template-columns: 34px 1fr 78px 74px;
+    padding: 8px 14px; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-400);
+    border-bottom: 1px solid var(--ink-150); background: var(--paper);
+    position: sticky; top: 0; z-index: 2;
+  }
+  .emp-row {
+    display: grid; grid-template-columns: 34px 1fr 78px 74px;
+    align-items: center;
+    padding: 10px 14px; border-bottom: 1px solid var(--ink-150);
+    cursor: pointer;
+  }
+  .emp-row:hover { background: var(--paper-2); }
+  .emp-row.selected { background: var(--white); box-shadow: inset 3px 0 0 var(--accent); }
+  .emp-row .av { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-family: var(--serif); font-size: 11.5px; font-weight: 600; color: var(--white); }
+  .emp-row .who .n { font-size: 13.5px; font-weight: 600; letter-spacing: -0.01em; }
+  .emp-row .who .m { font-size: 11.5px; color: var(--ink-500); margin-top: 1px; }
+  .emp-row .rk  { font-size: 12px; color: var(--ink-700); }
+  .emp-row .st  { justify-self: end; }
+
+  .status {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 2px 8px; border-radius: 100px; font-size: 11px; font-weight: 500;
+    line-height: 1.6;
+  }
+  .status .dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+  .status.on-duty { background: var(--success-tint); color: var(--success); }
+  .status.leave   { background: var(--warn-tint); color: var(--warn); }
+  .status.remote  { background: var(--accent-tint); color: var(--accent); }
+  .status.new     { background: var(--gold-tint); color: var(--gold); }
+  .status.off     { background: var(--ink-100); color: var(--ink-500); }
+
+  /* ---- detail panel ---- */
+  .detail { overflow: auto; }
+  .detail-hero {
+    padding: 24px 28px 20px;
+    display: grid; grid-template-columns: auto 1fr auto; gap: 20px;
+    align-items: center;
+    border-bottom: 1px solid var(--ink-150);
+    background:
+      radial-gradient(600px 200px at 12% 0%, rgba(30,58,138,.06), transparent 70%),
+      var(--white);
+  }
+  .detail-hero .av-lg {
+    width: 72px; height: 72px; border-radius: 50%; display: grid; place-items: center;
+    font-family: var(--serif); font-weight: 600; font-size: 28px; color: var(--white);
+    letter-spacing: -0.02em;
+    box-shadow: 0 6px 16px -6px rgba(20,18,16,.24), inset 0 0 0 1px rgba(255,255,255,.15);
+  }
+  .detail-hero h1 { font-family: var(--serif); font-size: 28px; font-weight: 500; letter-spacing: -0.025em; margin: 0; display: flex; align-items: baseline; gap: 10px; }
+  .detail-hero h1 .role { font-family: var(--sans); font-size: 13px; font-weight: 500; color: var(--ink-500); letter-spacing: 0; padding: 3px 8px; background: var(--ink-100); border-radius: 4px; }
+  .detail-hero .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 8px; font-size: 12.5px; color: var(--ink-500); }
+  .detail-hero .meta b { color: var(--ink-800); font-weight: 500; }
+  .detail-hero .meta .sep { color: var(--ink-200); }
+
+  .detail-hero .cta { display: flex; gap: 8px; align-items: center; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: var(--r); font-size: 12.5px; font-weight: 500; border: 1px solid var(--ink-200); background: var(--white); color: var(--ink-800); }
+  .btn:hover { border-color: var(--ink-300); }
+  .btn.primary { background: var(--ink-900); color: var(--paper); border-color: var(--ink-900); }
+  .btn.primary:hover { background: var(--ink-800); }
+  .btn .caret { color: var(--ink-400); }
+
+  .tabs { display: flex; padding: 0 28px; border-bottom: 1px solid var(--ink-150); background: var(--white); gap: 4px; }
+  .tab { padding: 12px 14px; font-size: 13px; color: var(--ink-500); font-weight: 500; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tab.active { color: var(--ink-900); border-bottom-color: var(--ink-900); }
+  .tab .n { font-family: var(--mono); font-size: 10.5px; color: var(--ink-400); margin-left: 4px; }
+  .tab.active .n { color: var(--ink-700); }
+
+  .tab-body { padding: 24px 28px 36px; background: var(--white); }
+  .tab-body.hidden { display: none; }
+
+  .section-title {
+    display: flex; align-items: baseline; justify-content: space-between; margin: 4px 0 12px;
+  }
+  .section-title h3 { font-family: var(--serif); font-weight: 500; font-size: 17px; letter-spacing: -0.015em; margin: 0; }
+  .section-title h3 .idx { font-family: var(--mono); font-size: 10.5px; color: var(--ink-400); font-weight: 400; margin-right: 8px; }
+  .section-title .linkbtn { font-size: 12px; color: var(--accent); font-weight: 500; }
+
+  .fields {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 0;
+    border: 1px solid var(--ink-150); border-radius: var(--r-lg); overflow: hidden;
+    background: var(--paper-2);
+  }
+  .fld {
+    padding: 12px 16px; background: var(--white);
+    border-right: 1px solid var(--ink-150); border-bottom: 1px solid var(--ink-150);
+  }
+  .fld:nth-child(4n) { border-right: 0; }
+  .fld:nth-last-child(-n+4):not(:nth-child(4n+1)) {} /* no-op */
+  .fld.wide { grid-column: span 2; }
+  .fld.full { grid-column: span 4; }
+  .fld .k { font-size: 11px; color: var(--ink-500); letter-spacing: 0.04em; margin-bottom: 4px; }
+  .fld .v { font-size: 13.5px; color: var(--ink-900); font-weight: 500; }
+  .fld .v.mono { font-family: var(--mono); font-weight: 500; }
+  .fld .sub { font-size: 11.5px; color: var(--ink-500); margin-top: 2px; }
+
+  .card { background: var(--white); border: 1px solid var(--ink-150); border-radius: var(--r-lg); }
+
+  /* ---- timeline (appointments) ---- */
+  .timeline { padding: 4px 0; }
+  .tl-row {
+    display: grid; grid-template-columns: 110px 22px 1fr auto; gap: 16px;
+    padding: 14px 20px; border-bottom: 1px solid var(--ink-150);
+    position: relative;
+  }
+  .tl-row:last-child { border-bottom: 0; }
+  .tl-row .date { font-family: var(--mono); font-size: 12px; color: var(--ink-700); padding-top: 2px; }
+  .tl-row .date .y { color: var(--ink-400); }
+  .tl-row .pipe { position: relative; }
+  .tl-row .pipe::before {
+    content: ""; position: absolute; left: 50%; top: -14px; bottom: -14px; width: 1px; background: var(--ink-200);
+  }
+  .tl-row:first-child .pipe::before { top: 8px; }
+  .tl-row:last-child .pipe::before { bottom: auto; height: 22px; }
+  .tl-row .dot {
+    position: absolute; left: 50%; top: 8px; width: 10px; height: 10px; border-radius: 50%;
+    transform: translateX(-50%);
+    background: var(--white); border: 2px solid var(--ink-400);
+  }
+  .tl-row.pos .dot { border-color: var(--accent); }
+  .tl-row.pos.now .dot { background: var(--accent); }
+  .tl-row .body h4 { margin: 0; font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
+  .tl-row .body p { margin: 4px 0 0; font-size: 12.5px; color: var(--ink-500); line-height: 1.5; }
+  .tl-row .tag { align-self: start; font-size: 11px; color: var(--ink-500); padding: 3px 8px; border: 1px solid var(--ink-200); border-radius: 4px; letter-spacing: 0.02em; }
+
+  /* ---- attendance mini strip ---- */
+  .att-grid {
+    display: grid; grid-template-columns: repeat(30, 1fr); gap: 3px;
+    padding: 14px 16px;
+  }
+  .att-cell { aspect-ratio: 1; border-radius: 2px; background: var(--ink-100); position: relative; }
+  .att-cell[data-t="normal"] { background: #cfe0d3; }
+  .att-cell[data-t="ot"] { background: #a4c1ac; }
+  .att-cell[data-t="leave"] { background: var(--warn-tint); }
+  .att-cell[data-t="wfh"] { background: var(--accent-tint); }
+  .att-cell[data-t="off"] { background: var(--ink-100); }
+  .att-cell[data-t="late"] { background: var(--danger-tint); }
+  .att-legend { display: flex; gap: 14px; flex-wrap: wrap; padding: 0 16px 14px; font-size: 11.5px; color: var(--ink-500); }
+  .att-legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .att-legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
+  /* ---- misc ---- */
+  .hstack { display: flex; gap: 12px; align-items: stretch; }
+  .grow { flex: 1; min-width: 0; }
+  .col { display: flex; flex-direction: column; gap: 12px; }
+  .row-2 { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
+
+  .stat-line { display: flex; align-items: baseline; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid var(--ink-150); }
+  .stat-line:last-child { border-bottom: 0; }
+  .stat-line .k { font-size: 12.5px; color: var(--ink-500); }
+  .stat-line .v { font-family: var(--mono); font-size: 13px; color: var(--ink-900); font-weight: 500; }
+  .stat-line .v.pos { color: var(--success); }
+  .stat-line .v.neg { color: var(--danger); }
+
+  .callout {
+    background: var(--paper-2); border: 1px dashed var(--ink-200); border-radius: var(--r);
+    padding: 10px 12px; font-size: 12px; color: var(--ink-500); line-height: 1.5;
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .callout b { color: var(--ink-800); font-weight: 600; }
+
+  /* small right meta strip inside detail */
+  .meta-strip {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+    background: var(--ink-150); border: 1px solid var(--ink-150); border-radius: var(--r); overflow: hidden;
+    margin-top: 6px;
+  }
+  .meta-strip > div { background: var(--white); padding: 10px 12px; }
+  .meta-strip .k { font-size: 10.5px; color: var(--ink-500); letter-spacing: 0.06em; text-transform: uppercase; }
+  .meta-strip .v { font-family: var(--serif); font-size: 18px; font-weight: 500; margin-top: 2px; letter-spacing: -0.02em; }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: var(--ink-200); border-radius: 100px; border: 2px solid var(--paper); }
+  ::-webkit-scrollbar-track { background: transparent; }
+</style>
+</head>
+<body>
+
+<!-- ========== TOPBAR ========== -->
+<header class="topbar">
+  <div class="brand">
+    <span class="mark">T</span>
+    <span class="name">TalentOS</span>
+    <span class="sub">HR · v3.2</span>
+  </div>
+  <nav class="nav" aria-label="주 메뉴">
+    <a href="#">대시보드</a>
+    <a href="#" class="active">인사관리</a>
+    <a href="#">조직관리</a>
+    <a href="#">근태·휴가</a>
+    <a href="#">급여</a>
+    <a href="#">평가</a>
+    <a href="#">보고서</a>
+    <a href="#">설정</a>
+  </nav>
+  <div class="spacer"></div>
+  <div class="searchbar" title="전체 검색">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+    <input placeholder="사번, 이름, 부서로 빠르게 이동…" />
+    <span class="kbd">⌘K</span>
+  </div>
+  <button class="iconbtn" title="알림"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg></button>
+  <button class="iconbtn" title="도움말"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2-3 4"/><path d="M12 17h.01"/></svg></button>
+  <div class="me">
+    <span class="avatar" style="background:#3b4a7a">JH</span>
+    <div class="who">
+      <span class="n">정지훈 매니저</span>
+      <span class="r">인사팀 · HR Admin</span>
+    </div>
+  </div>
+</header>
+
+<!-- ========== PAGE HEADER ========== -->
+<section class="pageheader">
+  <div>
+    <div class="crumbs"><a>인사관리</a><span class="sep">/</span><a>임직원</a><span class="sep">/</span><span class="cur">전체 임직원</span></div>
+    <h1 class="pagetitle">임직원과 조직을 <em>한 화면</em>에서.</h1>
+    <p class="pagesub">사번·발령·근태·급여·평가까지, 담당자가 자주 오가는 흐름을 하나의 워크스페이스로 묶었습니다. 좌측 조직 트리에서 부서를 선택하고, 가운데에서 대상자를 고르면 우측에서 편집·발령을 처리할 수 있습니다.</p>
+  </div>
+  <div class="kpis" aria-label="주요 지표">
+    <div class="kpi">
+      <div class="label">재직 인원</div>
+      <div class="val">1,284<span class="u">명</span></div>
+      <div class="delta up">▲ 12 · 이번 달</div>
+    </div>
+    <div class="kpi">
+      <div class="label">신규 입사</div>
+      <div class="val">18<span class="u">명</span></div>
+      <div class="delta">3분기 · 온보딩 진행</div>
+    </div>
+    <div class="kpi">
+      <div class="label">진행 발령</div>
+      <div class="val">7<span class="u">건</span></div>
+      <div class="delta">결재 대기 3건</div>
+    </div>
+    <div class="kpi">
+      <div class="label">평균 근속</div>
+      <div class="val">5.4<span class="u">년</span></div>
+      <div class="delta down">▼ 0.2 · YoY</div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== WORKSPACE ========== -->
+<main class="workspace">
+
+  <!-- ---------- 좌: 조직 트리 ---------- -->
+  <aside class="panel" aria-label="조직 트리">
+    <div class="panel-head">
+      <span class="title">조직</span>
+      <div class="actions">
+        <button class="icon-btn" title="새 부서"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button>
+        <button class="icon-btn" title="펼치기"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></button>
+        <button class="icon-btn" title="더보기"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+      </div>
+    </div>
+    <div class="tree-search">
+      <input id="treeSearch" placeholder="부서 검색" />
+    </div>
+    <div class="tree" id="tree"></div>
+  </aside>
+
+  <!-- ---------- 중앙: 임직원 리스트 ---------- -->
+  <section class="panel" aria-label="임직원 리스트">
+    <div class="panel-head">
+      <span class="title">임직원 <span class="mono" style="color:var(--ink-400); font-weight:400; margin-left:6px" id="empCount">86명</span></span>
+      <div class="actions">
+        <button class="icon-btn" title="정렬"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M6 12h12M10 18h4"/></svg></button>
+        <button class="icon-btn" title="열 설정"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+        <button class="icon-btn" title="내보내기"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/></svg></button>
+      </div>
+    </div>
+    <div class="list-filters">
+      <button class="chip on" data-f="all">전체</button>
+      <button class="chip" data-f="on-duty">재직</button>
+      <button class="chip" data-f="leave">휴직</button>
+      <button class="chip" data-f="new">신규</button>
+      <button class="chip" data-f="remote">원격</button>
+      <span class="chip" style="border-style:dashed">직급 <span class="x">▾</span></span>
+      <span class="chip" style="border-style:dashed">입사연도 <span class="x">▾</span></span>
+    </div>
+    <div class="emp-list-hd">
+      <span></span>
+      <span>이름 / 사번</span>
+      <span>직급</span>
+      <span style="text-align:right">상태</span>
+    </div>
+    <div id="empList" class="emp-list"></div>
+  </section>
+
+  <!-- ---------- 우: 임직원 상세 ---------- -->
+  <section class="panel detail" aria-label="임직원 상세" id="detail">
+    <!-- rendered by JS -->
+  </section>
+
+</main>
+
+<!-- ============ DATA + LOGIC ============ -->
+<script>
+/* ---------- data ---------- */
+const AVATARS = ["#3b4a7a","#8a5a15","#2f6b4a","#a3341f","#5b3a7a","#7a5b3b","#3a6b7a","#7a3a5b","#4a5b3a"];
+const avatarColor = (s) => AVATARS[Math.abs([...s].reduce((a,c)=>a+c.charCodeAt(0),0)) % AVATARS.length];
+const initials = (name) => {
+  // 한국 이름: 성 1자 + 이름 첫자
+  const t = name.replace(/\s/g,"");
+  return t.length >= 2 ? t.slice(0,2) : t;
+};
+
+const ORG = {
+  id: "co", label: "다우 홀딩스", type: "co", count: 1284, children: [
+    { id: "hq", label: "본사", type: "hq", count: 412, children: [
+      { id: "ceo", label: "대표이사실", type: "team", count: 6 },
+      { id: "planning", label: "경영기획본부", type: "div", count: 84, children: [
+        { id: "strategy", label: "전략기획팀", type: "team", count: 12 },
+        { id: "finance",  label: "재무팀",     type: "team", count: 18 },
+        { id: "legal",    label: "법무·컴플라이언스", type: "team", count: 9 },
+      ]},
+      { id: "hr", label: "인사본부", type: "div", count: 24, children: [
+        { id: "hr-plan",  label: "인사기획팀", type: "team", count: 6 },
+        { id: "hr-ops",   label: "인사운영팀", type: "team", count: 10 },
+        { id: "hr-td",    label: "인재개발팀", type: "team", count: 8 },
+      ]},
+      { id: "mkt", label: "마케팅본부", type: "div", count: 62, children: [
+        { id: "brand", label: "브랜드팀", type: "team", count: 14 },
+        { id: "perf",  label: "퍼포먼스팀", type: "team", count: 22 },
+        { id: "content", label: "콘텐츠팀", type: "team", count: 12 },
+      ]},
+    ]},
+    { id: "prod", label: "프로덕트 부문", type: "div", count: 486, children: [
+      { id: "eng", label: "개발본부", type: "div", count: 312, children: [
+        { id: "platform", label: "플랫폼팀", type: "team", count: 42 },
+        { id: "app",      label: "애플리케이션팀", type: "team", count: 58 },
+        { id: "data",     label: "데이터플랫폼팀", type: "team", count: 34 },
+        { id: "sre",      label: "SRE팀", type: "team", count: 18 },
+      ]},
+      { id: "design",   label: "디자인본부", type: "div", count: 44 },
+      { id: "prodmgmt", label: "프로덕트관리본부", type: "div", count: 30 },
+    ]},
+    { id: "sales", label: "영업본부", type: "div", count: 236, children: [
+      { id: "ent", label: "엔터프라이즈영업팀", type: "team", count: 46 },
+      { id: "smb", label: "SMB영업팀", type: "team", count: 62 },
+      { id: "cs",  label: "고객성공팀", type: "team", count: 38 },
+    ]},
+    { id: "sub", label: "자회사·해외법인", type: "sub", count: 150, children: [
+      { id: "jp", label: "다우재팬(도쿄)", type: "co2", count: 62 },
+      { id: "vn", label: "다우베트남(하노이)", type: "co2", count: 88 },
+    ]},
+  ]
+};
+
+const EMPLOYEES = [
+  { id: "20140312", name: "김서연", team: "인사운영팀", teamId: "hr-ops", rank: "부장", role: "팀장",
+    status: "on-duty", joined: "2014-03-12", email: "seoyeon.kim@daou.co.kr", phone: "010-4213-9021",
+    birth: "1984-11-02", rrn: "841102-2******", gender: "여", edu: "이화여자대학교 경영학 학사",
+    address: "서울 강남구 테헤란로 152 (역삼동)", account: "국민 812902-04-***821",
+    tags: ["핵심인재","리더십"], },
+  { id: "20180915", name: "박도현", team: "인사운영팀", teamId: "hr-ops", rank: "차장", role: "수석",
+    status: "on-duty", joined: "2018-09-15", email: "dohyun.park@daou.co.kr", phone: "010-8802-3311",
+    birth: "1988-04-21", rrn: "880421-1******", gender: "남", edu: "성균관대학교 산업공학 학사",
+    address: "서울 마포구 월드컵북로 12", account: "신한 110-321-***001",
+    tags: ["코칭"], },
+  { id: "20210204", name: "이한별", team: "인사운영팀", teamId: "hr-ops", rank: "대리", role: "선임",
+    status: "leave", joined: "2021-02-04", email: "hanbyul.lee@daou.co.kr", phone: "010-1122-5546",
+    birth: "1993-07-18", rrn: "930718-2******", gender: "여", edu: "고려대학교 심리학 학사",
+    address: "서울 성동구 왕십리로 210", account: "우리 1002-***-49821",
+    tags: ["육아휴직 D-142"], },
+  { id: "20220701", name: "최유진", team: "인사운영팀", teamId: "hr-ops", rank: "사원", role: "주임",
+    status: "on-duty", joined: "2022-07-01", email: "yujin.choi@daou.co.kr", phone: "010-9911-4028",
+    birth: "1996-12-09", rrn: "961209-2******", gender: "여", edu: "한양대학교 국제학부",
+    address: "경기 성남시 분당구 판교로 235", account: "카카오뱅크 3333-06-***022",
+    tags: [], },
+  { id: "20240218", name: "정민석", team: "인사운영팀", teamId: "hr-ops", rank: "사원", role: "-",
+    status: "new", joined: "2024-02-18", email: "minseok.jung@daou.co.kr", phone: "010-2882-9021",
+    birth: "1999-05-30", rrn: "990530-1******", gender: "남", edu: "연세대학교 컴퓨터과학 학사",
+    address: "서울 서대문구 신촌로 90", account: "토스 1000-****-2201",
+    tags: ["온보딩 W3"], },
+  { id: "20191008", name: "장예은", team: "인사기획팀", teamId: "hr-plan", rank: "과장", role: "책임",
+    status: "remote", joined: "2019-10-08", email: "yeeun.jang@daou.co.kr", phone: "010-5522-1129",
+    birth: "1990-08-14", rrn: "900814-2******", gender: "여", edu: "서울대학교 사회학 석사",
+    address: "부산 해운대구 센텀중앙로 79", account: "국민 812-***-33094",
+    tags: ["원격근무"], },
+  { id: "20170422", name: "윤재훈", team: "인재개발팀", teamId: "hr-td", rank: "차장", role: "팀장",
+    status: "on-duty", joined: "2017-04-22", email: "jaehoon.yoon@daou.co.kr", phone: "010-3300-2201",
+    birth: "1985-01-26", rrn: "850126-1******", gender: "남", edu: "KAIST 산업공학 석사",
+    address: "경기 용인시 수지구 광교중앙로 240", account: "하나 218-***-7712",
+    tags: ["교육기획"], },
+  { id: "20200311", name: "한서율", team: "인재개발팀", teamId: "hr-td", rank: "대리", role: "선임",
+    status: "on-duty", joined: "2020-03-11", email: "seoyul.han@daou.co.kr", phone: "010-7715-8823",
+    birth: "1992-06-04", rrn: "920604-2******", gender: "여", edu: "이화여자대학교 교육공학",
+    address: "서울 광진구 능동로 120", account: "신한 110-***-91002",
+    tags: [], },
+  { id: "20231107", name: "오세림", team: "인재개발팀", teamId: "hr-td", rank: "사원", role: "-",
+    status: "new", joined: "2023-11-07", email: "serim.oh@daou.co.kr", phone: "010-4442-3316",
+    birth: "1998-02-19", rrn: "980219-2******", gender: "여", edu: "홍익대학교 시각디자인",
+    address: "서울 마포구 연남로 20", account: "카카오뱅크 3333-***-4402",
+    tags: ["온보딩 완료"], },
+];
+
+const STATUS_LABEL = {
+  "on-duty": "재직",
+  "leave":   "휴직",
+  "remote":  "원격",
+  "new":     "신규",
+  "off":     "퇴사"
+};
+
+/* ---------- render: tree ---------- */
+const ICON = {
+  co:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 10h.01M9 14h.01M9 18h.01M15 10h.01M15 14h.01M15 18h.01"/></svg>',
+  hq:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 21h18M5 21V8l7-4 7 4v13"/><path d="M9 21v-6h6v6"/></svg>',
+  div:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg>',
+  team: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3"/><path d="M2 20c0-3 3-5 7-5s7 2 7 5"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14c3 0 5 2 5 5"/></svg>',
+  sub:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>',
+  co2:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 21h16M6 21V9l6-4 6 4v12"/><path d="M10 21v-5h4v5"/></svg>'
+};
+
+let selectedDeptId = "hr-ops";
+let openIds = new Set(["co","hq","hr","prod","eng"]);
+
+function renderTree() {
+  const root = document.getElementById("tree");
+  root.innerHTML = "";
+  root.appendChild(nodeEl(ORG, 0));
+}
+function nodeEl(node, depth) {
+  const wrap = document.createElement("div");
+  wrap.className = "tnode";
+  const row = document.createElement("div");
+  row.className = "trow" + (node.id === selectedDeptId ? " selected" : "");
+  row.dataset.id = node.id;
+  const hasChildren = !!(node.children && node.children.length);
+  const isOpen = openIds.has(node.id);
+
+  row.innerHTML = `
+    <span class="chev ${hasChildren ? (isOpen ? 'open' : '') : 'hidden'}">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 6 6 6-6 6"/></svg>
+    </span>
+    <span class="ico">${ICON[node.type] || ICON.team}</span>
+    <span class="lbl">${node.label}</span>
+    <span class="count">${node.count.toLocaleString()}</span>
+  `;
+  row.addEventListener("click", (e) => {
+    if (hasChildren && e.target.closest(".chev")) {
+      if (openIds.has(node.id)) openIds.delete(node.id); else openIds.add(node.id);
+      renderTree();
+      return;
+    }
+    selectedDeptId = node.id;
+    // 접혀있으면 자동으로 펴기
+    if (hasChildren && !openIds.has(node.id)) openIds.add(node.id);
+    renderTree();
+    renderEmpList();
+  });
+  wrap.appendChild(row);
+
+  if (hasChildren) {
+    const kids = document.createElement("div");
+    kids.className = "tchildren" + (isOpen ? " open" : "");
+    node.children.forEach(c => kids.appendChild(nodeEl(c, depth + 1)));
+    wrap.appendChild(kids);
+  }
+  return wrap;
+}
+
+/* tree search: 얕은 필터 (그냥 강조) */
+document.addEventListener("input", (e) => {
+  if (e.target.id !== "treeSearch") return;
+  const q = e.target.value.trim();
+  document.querySelectorAll("#tree .trow .lbl").forEach(el => {
+    const t = el.textContent;
+    if (!q) { el.innerHTML = t; return; }
+    el.innerHTML = t.replace(new RegExp(q, "gi"), (m) => `<mark style="background:var(--gold-tint);color:var(--ink-900);padding:0 2px;border-radius:2px">${m}</mark>`);
+  });
+});
+
+/* ---------- render: employee list ---------- */
+let selectedEmpId = "20140312";
+let statusFilter = "all";
+
+function filteredEmployees() {
+  // 부서 필터: teamId가 selectedDeptId이거나 하위(간단히 이 데모에선 team 단위)
+  // 상위 부서 선택 시 하위 팀들의 모든 임직원을 포함
+  const teamIdsUnder = collectTeamIds(findNode(ORG, selectedDeptId));
+  return EMPLOYEES.filter(e => teamIdsUnder.has(e.teamId))
+    .filter(e => statusFilter === "all" ? true : e.status === statusFilter);
+}
+function findNode(node, id) {
+  if (node.id === id) return node;
+  if (!node.children) return null;
+  for (const c of node.children) { const r = findNode(c, id); if (r) return r; }
+  return null;
+}
+function collectTeamIds(node) {
+  const s = new Set();
+  if (!node) return s;
+  const walk = (n) => {
+    if (!n.children || n.children.length === 0) s.add(n.id);
+    (n.children || []).forEach(walk);
+  };
+  walk(node);
+  return s;
+}
+
+function renderEmpList() {
+  const wrap = document.getElementById("empList");
+  const list = filteredEmployees();
+  document.getElementById("empCount").textContent = `${list.length}명`;
+  wrap.innerHTML = "";
+  if (list.length === 0) {
+    wrap.innerHTML = `<div style="padding:32px 20px;color:var(--ink-500);font-size:13px;text-align:center">해당 부서에 데이터가 없습니다. <br><span style="font-size:12px;color:var(--ink-400)">다른 부서를 선택하거나 필터를 초기화하세요.</span></div>`;
+    // 상세도 부드럽게 placeholder
+    document.getElementById("detail").innerHTML = detailEmpty();
+    return;
+  }
+  list.forEach(e => {
+    const row = document.createElement("div");
+    row.className = "emp-row" + (e.id === selectedEmpId ? " selected" : "");
+    row.dataset.id = e.id;
+    row.innerHTML = `
+      <span class="av" style="background:${avatarColor(e.name)}">${initials(e.name)}</span>
+      <div class="who">
+        <div class="n">${e.name} <span style="font-family:var(--mono);font-size:11px;color:var(--ink-400);font-weight:400;margin-left:4px">#${e.id}</span></div>
+        <div class="m">${e.team} · ${e.role !== "-" ? e.role : ""}</div>
+      </div>
+      <span class="rk">${e.rank}</span>
+      <span class="st"><span class="status ${e.status}"><span class="dot"></span>${STATUS_LABEL[e.status]}</span></span>
+    `;
+    row.addEventListener("click", () => {
+      selectedEmpId = e.id;
+      renderEmpList();
+      renderDetail();
+    });
+    wrap.appendChild(row);
+  });
+  // 선택된 임직원이 필터 밖으로 사라졌으면 첫번째로
+  if (!list.find(e => e.id === selectedEmpId)) {
+    selectedEmpId = list[0].id;
+    renderEmpList();
+  }
+  renderDetail();
+}
+
+document.addEventListener("click", (e) => {
+  const chip = e.target.closest(".list-filters .chip[data-f]");
+  if (!chip) return;
+  document.querySelectorAll(".list-filters .chip[data-f]").forEach(c => c.classList.remove("on"));
+  chip.classList.add("on");
+  statusFilter = chip.dataset.f;
+  renderEmpList();
+});
+
+/* ---------- render: detail ---------- */
+let activeTab = "info";
+
+function renderDetail() {
+  const emp = EMPLOYEES.find(e => e.id === selectedEmpId);
+  const el = document.getElementById("detail");
+  if (!emp) { el.innerHTML = detailEmpty(); return; }
+  const color = avatarColor(emp.name);
+  const yearsAt = ((new Date("2026-09-22") - new Date(emp.joined)) / (365.25*24*3600*1000)).toFixed(1);
+
+  el.innerHTML = `
+    <div class="detail-hero">
+      <div class="av-lg" style="background:${color}">${initials(emp.name)}</div>
+      <div>
+        <h1>${emp.name} <span class="role">${emp.rank} · ${emp.role}</span></h1>
+        <div class="meta">
+          <span><b>#${emp.id}</b> 사번</span><span class="sep">·</span>
+          <span>${emp.team}</span><span class="sep">·</span>
+          <span>입사 <b class="mono">${emp.joined}</b> <span style="color:var(--ink-400)">(${yearsAt}년)</span></span><span class="sep">·</span>
+          <span><span class="status ${emp.status}"><span class="dot"></span>${STATUS_LABEL[emp.status]}</span></span>
+          ${emp.tags.map(t => `<span class="chip" style="padding:2px 8px;font-size:11px">${t}</span>`).join("")}
+        </div>
+      </div>
+      <div class="cta">
+        <button class="btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h6l2 3h8v11H4z"/></svg> 인사기록 다운로드</button>
+        <button class="btn primary"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> 발령 상신 <span class="caret">▾</span></button>
+      </div>
+    </div>
+
+    <div class="tabs">
+      ${tab("info", "기본정보")}
+      ${tab("assign", "발령이력", 12)}
+      ${tab("att", "근태", 30)}
+      ${tab("pay", "급여")}
+      ${tab("edu", "교육", 6)}
+      ${tab("eval", "평가")}
+      ${tab("doc", "문서", 24)}
+    </div>
+
+    <div class="tab-body" id="tabBody">
+      ${renderTabBody(emp)}
+    </div>
+  `;
+
+  document.querySelectorAll("#detail .tab").forEach(t => t.addEventListener("click", () => {
+    activeTab = t.dataset.t;
+    renderDetail();
+  }));
+}
+
+function tab(id, label, n) {
+  return `<button class="tab ${activeTab===id?'active':''}" data-t="${id}">${label}${n?`<span class="n">${n}</span>`:""}</button>`;
+}
+
+function renderTabBody(emp) {
+  switch (activeTab) {
+    case "info":   return tabInfo(emp);
+    case "assign": return tabAssign(emp);
+    case "att":    return tabAtt(emp);
+    case "pay":    return tabPay(emp);
+    case "edu":    return tabEdu(emp);
+    default:       return `<div class="callout"><b>준비 중</b><span>이 데모에서는 이 탭의 상세 화면이 포함되지 않았습니다. 실제 구현 시 인사·평가 규정에 맞춰 필드를 배치합니다.</span></div>`;
+  }
+}
+
+function tabInfo(emp) {
+  return `
+    <div class="section-title">
+      <h3><span class="idx mono">01</span>인적사항</h3>
+      <a class="linkbtn" href="#">편집 →</a>
+    </div>
+    <div class="fields">
+      <div class="fld"><div class="k">성명 (한글)</div><div class="v">${emp.name}</div><div class="sub">성명 (한자) 未登録</div></div>
+      <div class="fld"><div class="k">사번</div><div class="v mono">#${emp.id}</div></div>
+      <div class="fld"><div class="k">주민등록번호</div><div class="v mono">${emp.rrn}</div><div class="sub">암호화 · 열람 로그 기록</div></div>
+      <div class="fld"><div class="k">성별 / 생년월일</div><div class="v">${emp.gender} · <span class="mono">${emp.birth}</span></div></div>
+
+      <div class="fld wide"><div class="k">이메일 (사내)</div><div class="v mono">${emp.email}</div></div>
+      <div class="fld"><div class="k">휴대전화</div><div class="v mono">${emp.phone}</div></div>
+      <div class="fld"><div class="k">사내 내선</div><div class="v mono">02-2222-${(1000 + Math.abs([...emp.id].reduce((a,c)=>a+ +c,0))%9000)}</div></div>
+
+      <div class="fld full"><div class="k">주소</div><div class="v">${emp.address}</div><div class="sub">우편번호 자동 조회 · 최근 갱신 2025.11.02</div></div>
+    </div>
+
+    <div class="section-title" style="margin-top:28px">
+      <h3><span class="idx mono">02</span>소속 · 직위</h3>
+      <a class="linkbtn" href="#">발령 상신 →</a>
+    </div>
+    <div class="fields">
+      <div class="fld"><div class="k">소속 (본부)</div><div class="v">인사본부</div></div>
+      <div class="fld"><div class="k">소속 (팀)</div><div class="v">${emp.team}</div></div>
+      <div class="fld"><div class="k">직급 / 직책</div><div class="v">${emp.rank} / ${emp.role}</div></div>
+      <div class="fld"><div class="k">근무지</div><div class="v">본사 · 서울</div><div class="sub">서울 강남구 테헤란로 152</div></div>
+
+      <div class="fld"><div class="k">고용 형태</div><div class="v">정규직</div></div>
+      <div class="fld"><div class="k">직군 / 직렬</div><div class="v">일반 / HR</div></div>
+      <div class="fld"><div class="k">입사일</div><div class="v mono">${emp.joined}</div></div>
+      <div class="fld"><div class="k">수습 종료</div><div class="v mono">${shiftDate(emp.joined, 3)}</div></div>
+    </div>
+
+    <div class="section-title" style="margin-top:28px">
+      <h3><span class="idx mono">03</span>학력 · 계좌 · 4대보험</h3>
+      <a class="linkbtn" href="#">전체 보기 →</a>
+    </div>
+    <div class="row-2">
+      <div class="card">
+        <div style="padding:12px 16px;border-bottom:1px solid var(--ink-150);font-size:12px;color:var(--ink-500)">학력 (최종)</div>
+        <div class="stat-line"><span class="k">학교</span><span class="v" style="font-family:var(--sans)">${emp.edu.split(" ").slice(0,-2).join(" ")}</span></div>
+        <div class="stat-line"><span class="k">전공 / 학위</span><span class="v" style="font-family:var(--sans)">${emp.edu.split(" ").slice(-2).join(" ")}</span></div>
+        <div class="stat-line"><span class="k">졸업</span><span class="v">2012.02</span></div>
+        <div class="stat-line"><span class="k">자격증</span><span class="v" style="font-family:var(--sans)">PHR · SPHR</span></div>
+      </div>
+      <div class="card">
+        <div style="padding:12px 16px;border-bottom:1px solid var(--ink-150);font-size:12px;color:var(--ink-500)">급여 계좌 · 사회보험</div>
+        <div class="stat-line"><span class="k">급여 계좌</span><span class="v">${emp.account}</span></div>
+        <div class="stat-line"><span class="k">국민연금</span><span class="v pos">가입</span></div>
+        <div class="stat-line"><span class="k">건강보험</span><span class="v pos">가입 · 직장</span></div>
+        <div class="stat-line"><span class="k">고용보험</span><span class="v pos">가입</span></div>
+        <div class="stat-line"><span class="k">산재보험</span><span class="v pos">가입</span></div>
+      </div>
+    </div>
+
+    <div class="callout" style="margin-top:20px">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:2px;color:var(--accent)"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+      <div>
+        <b>개인정보 열람 로그</b> — 최근 30일 4건. 주민번호·계좌 등 민감정보는 접근 시 사유가 남습니다.
+        <span style="color:var(--ink-800);margin-left:6px;text-decoration:underline;text-decoration-color:var(--ink-300);cursor:pointer">열람 로그 보기 →</span>
+      </div>
+    </div>
+  `;
+}
+
+function tabAssign(emp) {
+  const y = emp.joined.slice(0,4);
+  return `
+    <div class="section-title">
+      <h3><span class="idx mono">01</span>발령 이력</h3>
+      <a class="linkbtn" href="#">전체 내려받기 (PDF) →</a>
+    </div>
+    <div class="card">
+      <div class="timeline">
+        <div class="tl-row pos now">
+          <div class="date">2024.01.02 <span class="y">현재</span></div>
+          <div class="pipe"><span class="dot"></span></div>
+          <div class="body">
+            <h4>승진 · ${emp.rank} 발령</h4>
+            <p>인사운영팀 <b>팀장</b>으로 보직 발령. 전임 팀장의 본부 이동에 따른 승계.</p>
+          </div>
+          <span class="tag">HR-2024-001</span>
+        </div>
+        <div class="tl-row pos">
+          <div class="date">2021.07.01 <span class="y">2년 6개월</span></div>
+          <div class="pipe"><span class="dot"></span></div>
+          <div class="body">
+            <h4>부서 이동 — 인사기획팀 → 인사운영팀</h4>
+            <p>운영 프로세스 개편 프로젝트 리드를 위해 이동.</p>
+          </div>
+          <span class="tag">전보</span>
+        </div>
+        <div class="tl-row pos">
+          <div class="date">2019.01.01 <span class="y">2년 6개월</span></div>
+          <div class="pipe"><span class="dot"></span></div>
+          <div class="body">
+            <h4>승진 · 차장</h4>
+            <p>연말 평가 S등급으로 정기 승진 대상 선정.</p>
+          </div>
+          <span class="tag">승진</span>
+        </div>
+        <div class="tl-row pos">
+          <div class="date">${emp.joined.replaceAll("-",".")} <span class="y">입사</span></div>
+          <div class="pipe"><span class="dot"></span></div>
+          <div class="body">
+            <h4>신규 입사 — 인사기획팀 사원</h4>
+            <p>공채 ${y}년 상반기 (기수 #${(+y%100)+7}). 수습 3개월 후 정규 전환.</p>
+          </div>
+          <span class="tag">입사</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title" style="margin-top:24px">
+      <h3><span class="idx mono">02</span>진행 중인 발령</h3>
+    </div>
+    <div class="card" style="padding:14px 16px;display:flex;gap:14px;align-items:center">
+      <span class="status new"><span class="dot"></span>결재대기</span>
+      <div style="flex:1">
+        <div style="font-size:13.5px;font-weight:600">직책 조정 — 팀장 → 파트리드 겸직</div>
+        <div style="font-size:12px;color:var(--ink-500);margin-top:2px">발효 예정 2026.10.01 · 상신자 정지훈 매니저 · 다음 결재자 인사본부장 이규현</div>
+      </div>
+      <button class="btn">결재선 보기</button>
+      <button class="btn primary">확인</button>
+    </div>
+  `;
+}
+
+function tabAtt(emp) {
+  const cells = [];
+  const types = ["normal","normal","normal","normal","normal","ot","off","normal","normal","late","normal","normal","wfh","off","normal","ot","normal","normal","normal","leave","normal","normal","wfh","off","normal","normal","ot","normal","normal","normal"];
+  for (let i = 0; i < 30; i++) {
+    const t = types[i] || "normal";
+    cells.push(`<div class="att-cell" data-t="${t}" title="9/${i+1} · ${t}"></div>`);
+  }
+  return `
+    <div class="section-title">
+      <h3><span class="idx mono">01</span>이달 근태 (2026.09)</h3>
+      <a class="linkbtn" href="#">캘린더 보기 →</a>
+    </div>
+    <div class="card">
+      <div class="att-grid">${cells.join("")}</div>
+      <div class="att-legend">
+        <span><i style="background:#cfe0d3"></i>정상</span>
+        <span><i style="background:#a4c1ac"></i>연장근무</span>
+        <span><i style="background:var(--accent-tint)"></i>재택</span>
+        <span><i style="background:var(--warn-tint)"></i>휴가</span>
+        <span><i style="background:var(--danger-tint)"></i>지각</span>
+        <span><i style="background:var(--ink-100)"></i>휴일/미출근</span>
+      </div>
+    </div>
+
+    <div class="row-2" style="margin-top:20px">
+      <div class="card">
+        <div style="padding:12px 16px;border-bottom:1px solid var(--ink-150);font-size:12px;color:var(--ink-500);display:flex;justify-content:space-between"><span>근무 요약</span><span class="mono" style="font-size:11px">주 52시간 준수</span></div>
+        <div class="stat-line"><span class="k">기본 근무</span><span class="v">168 h</span></div>
+        <div class="stat-line"><span class="k">연장 근무</span><span class="v">12.5 h</span></div>
+        <div class="stat-line"><span class="k">재택 근무</span><span class="v">32 h</span></div>
+        <div class="stat-line"><span class="k">평균 출근</span><span class="v">08:52</span></div>
+        <div class="stat-line"><span class="k">지각 / 조퇴</span><span class="v neg">1 / 0</span></div>
+      </div>
+      <div class="card">
+        <div style="padding:12px 16px;border-bottom:1px solid var(--ink-150);font-size:12px;color:var(--ink-500)">연차 · 휴가</div>
+        <div class="stat-line"><span class="k">연차 부여</span><span class="v">17 일</span></div>
+        <div class="stat-line"><span class="k">사용</span><span class="v">9.5 일</span></div>
+        <div class="stat-line"><span class="k">잔여</span><span class="v pos">7.5 일</span></div>
+        <div class="stat-line"><span class="k">보건 / 경조</span><span class="v">1 / 0</span></div>
+        <div class="stat-line"><span class="k">사용 마감</span><span class="v mono">2026.12.31</span></div>
+      </div>
+    </div>
+  `;
+}
+
+function tabPay(emp) {
+  return `
+    <div class="section-title">
+      <h3><span class="idx mono">01</span>급여 요약 · 2026.09</h3>
+      <a class="linkbtn" href="#">급여명세서 →</a>
+    </div>
+    <div class="meta-strip">
+      <div><div class="k">지급 총액</div><div class="v">₩ 6,320,000</div></div>
+      <div><div class="k">공제 합계</div><div class="v" style="color:var(--danger)">− ₩ 812,540</div></div>
+      <div><div class="k">실 수령액</div><div class="v" style="color:var(--accent)">₩ 5,507,460</div></div>
+    </div>
+
+    <div class="row-2" style="margin-top:20px">
+      <div class="card">
+        <div style="padding:12px 16px;border-bottom:1px solid var(--ink-150);font-size:12px;color:var(--ink-500)">지급 내역</div>
+        <div class="stat-line"><span class="k">기본급</span><span class="v">4,800,000</span></div>
+        <div class="stat-line"><span class="k">직책수당</span><span class="v">400,000</span></div>
+        <div class="stat-line"><span class="k">식대</span><span class="v">200,000</span></div>
+        <div class="stat-line"><span class="k">연장근로수당</span><span class="v">620,000</span></div>
+        <div class="stat-line"><span class="k">복지포인트</span><span class="v">300,000</span></div>
+      </div>
+      <div class="card">
+        <div style="padding:12px 16px;border-bottom:1px solid var(--ink-150);font-size:12px;color:var(--ink-500)">공제 내역</div>
+        <div class="stat-line"><span class="k">국민연금 (4.5%)</span><span class="v neg">− 284,400</span></div>
+        <div class="stat-line"><span class="k">건강보험</span><span class="v neg">− 224,120</span></div>
+        <div class="stat-line"><span class="k">장기요양</span><span class="v neg">− 29,010</span></div>
+        <div class="stat-line"><span class="k">고용보험</span><span class="v neg">− 56,880</span></div>
+        <div class="stat-line"><span class="k">소득세 · 지방소득세</span><span class="v neg">− 218,130</span></div>
+      </div>
+    </div>
+
+    <div class="callout" style="margin-top:20px">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:2px;color:var(--gold)"><path d="M12 2 3 7v6c0 5 4 8 9 9 5-1 9-4 9-9V7Z"/></svg>
+      <div><b>연말정산</b> — 2025 귀속 정산 완료 · 환급 <span class="mono" style="color:var(--success)">+ ₩284,000</span> · 2월 급여 반영됨.</div>
+    </div>
+  `;
+}
+
+function tabEdu(emp) {
+  return `
+    <div class="section-title">
+      <h3><span class="idx mono">01</span>법정의무교육 · 필수 이수</h3>
+      <a class="linkbtn" href="#">교육 배정 →</a>
+    </div>
+    <div class="card">
+      <div class="stat-line"><span class="k">직장 내 성희롱 예방교육 · 2026</span><span class="v pos">이수 · 2026.03.14</span></div>
+      <div class="stat-line"><span class="k">직장 내 괴롭힘 예방교육 · 2026</span><span class="v pos">이수 · 2026.03.14</span></div>
+      <div class="stat-line"><span class="k">개인정보보호 교육 · 2026</span><span class="v pos">이수 · 2026.04.02</span></div>
+      <div class="stat-line"><span class="k">산업안전보건 교육 · 3분기</span><span class="v" style="color:var(--warn)">이수 예정 · D-11</span></div>
+      <div class="stat-line"><span class="k">장애인 인식개선 교육</span><span class="v pos">이수 · 2026.05.20</span></div>
+    </div>
+
+    <div class="section-title" style="margin-top:24px">
+      <h3><span class="idx mono">02</span>선택 교육 이력</h3>
+    </div>
+    <div class="card">
+      <div class="stat-line"><span class="k">HR 리더십 스쿨 (외부)</span><span class="v" style="font-family:var(--sans)">수료 · 96h · 2025</span></div>
+      <div class="stat-line"><span class="k">People Analytics 부트캠프</span><span class="v" style="font-family:var(--sans)">수료 · 40h · 2024</span></div>
+    </div>
+  `;
+}
+
+function detailEmpty() {
+  return `
+    <div style="height:100%;display:grid;place-items:center;padding:60px 40px;text-align:center;background:var(--white)">
+      <div>
+        <div class="serif" style="font-size:22px;color:var(--ink-500)">임직원을 선택해 주세요</div>
+        <p style="font-size:13px;color:var(--ink-400);margin-top:8px">좌측 리스트에서 조회할 임직원을 선택하면 상세 정보가 표시됩니다.</p>
+      </div>
+    </div>
+  `;
+}
+
+function shiftDate(iso, months) {
+  const d = new Date(iso);
+  d.setMonth(d.getMonth() + months);
+  return d.toISOString().slice(0,10);
+}
+
+/* ---------- init ---------- */
+renderTree();
+renderEmpList();
+</script>
+
+</body>
+</html>

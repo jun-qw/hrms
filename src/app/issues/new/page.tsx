@@ -55,7 +55,7 @@ export default function NewIssuePage() {
   return (
     <div>
       <Breadcrumb />
-      <h1 className="text-2xl font-bold mb-6">이슈 등록</h1>
+      <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.025em] text-ink-900 mb-6">이슈 등록</h1>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <form onSubmit={handleSubmit} className="space-y-6 lg:col-span-2">

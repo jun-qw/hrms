@@ -97,7 +97,7 @@ export default function RetirementCertificatePage({ params }: { params: Promise<
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
-          <h1 className="text-2xl font-bold">퇴직증명서</h1>
+          <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.025em] text-ink-900">퇴직증명서</h1>
         </div>
         <Button variant="outline" onClick={() => window.print()}>
           <Printer className="h-4 w-4 mr-2" />
@@ -114,7 +114,7 @@ export default function RetirementCertificatePage({ params }: { params: Promise<
 
           {/* Title */}
           <PrintLogo height={44} className="mb-6" />
-          <h1 className="text-3xl font-bold text-center mb-12 tracking-widest">
+          <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.025em] text-ink-900 text-center mb-12 tracking-widest">
             퇴 직 증 명 서
           </h1>
 

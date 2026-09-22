@@ -27,10 +27,9 @@ interface StatsCardProps {
 /**
  * 지표 카드.
  *
- * 라벨은 위에 작게, 숫자는 크게, 단위는 숫자에 붙여 작게. 국내 인사 화면에서
- * 익숙한 배치이고, 숫자를 훑을 때 단위가 시선을 뺏지 않습니다. 카드는 그림자
- * 대신 헤어라인 한 줄로 구분하고, 선택 상태는 색을 채우는 대신 테두리를
- * 진하게 해서 옆 카드와 대비가 과해지지 않게 합니다.
+ * 디자인 시안의 KPI 칸 — 라벨은 작은 대문자로 위에, 숫자는 세리프로 크게,
+ * 단위는 숫자에 붙여 작게. 흰 면에 헤어라인 한 줄이고, 선택 상태는 색을
+ * 채우는 대신 테두리를 먹색으로 바꿉니다.
  */
 export function StatsCard({
   title,
@@ -49,33 +48,32 @@ export function StatsCard({
     <Tag
       {...(onClick ? { type: 'button' as const, onClick } : {})}
       className={cn(
-        'rounded-lg border bg-card px-4 py-3.5 text-left transition-colors',
-        selected ? 'border-foreground/70' : 'border-border',
-        onClick && 'hover:border-foreground/30',
+        'rounded-[10px] border bg-card px-4 py-3 text-left transition-colors',
+        selected ? 'border-ink-900' : 'border-ink-150',
+        onClick && 'hover:border-ink-300',
       )}
     >
       <div className="flex items-start justify-between gap-2">
-        <p className="text-xs font-medium text-muted-foreground">{title}</p>
-        <div className={cn('rounded-md p-1.5', iconStyles[color])}>
+        <p className="text-[11px] uppercase tracking-[0.06em] text-ink-500">{title}</p>
+        <div className={cn('rounded-md p-1', iconStyles[color])}>
           <Icon className="h-3.5 w-3.5" />
         </div>
       </div>
-      <p className="mt-2 flex items-baseline gap-1">
-        <span className="text-[26px] font-bold leading-none tracking-tight tabular-nums">
-          {value}
+      <p className="mt-1 flex items-baseline gap-1.5">
+        <span className="font-serif text-[24px] font-medium leading-none tracking-[-0.02em] text-ink-900">
+          {typeof value === 'number' ? value.toLocaleString('ko-KR') : value}
         </span>
-        {unit && <span className="text-sm font-medium text-muted-foreground">{unit}</span>}
+        {unit && <span className="text-[12px] font-medium text-ink-500">{unit}</span>}
       </p>
-      {description && <p className="mt-1.5 text-xs text-muted-foreground">{description}</p>}
+      {description && <p className="mt-1.5 font-mono text-[10.5px] text-ink-500">{description}</p>}
       {trend && (
         <p
           className={cn(
-            'mt-1.5 text-xs tabular-nums',
-            trend.value >= 0 ? 'text-accent-green' : 'text-destructive',
+            'mt-1.5 font-mono text-[10.5px]',
+            trend.value >= 0 ? 'text-success' : 'text-danger',
           )}
         >
-          {trend.value >= 0 ? '+' : ''}
-          {trend.value}% {trend.label}
+          {trend.value >= 0 ? '▲' : '▼'} {Math.abs(trend.value)}% {trend.label}
         </p>
       )}
     </Tag>

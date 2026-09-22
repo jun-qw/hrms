@@ -47,7 +47,7 @@ export default function SeverancePage() {
     <div>
       <Breadcrumb />
       <PreviewNotice />
-      <h1 className="text-2xl font-bold mb-6">퇴직금 관리</h1>
+      <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.025em] text-ink-900 mb-6">퇴직금 관리</h1>
 
       {/* Stats Cards */}
       <div className="grid gap-4 grid-cols-4 mb-6">

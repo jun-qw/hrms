@@ -234,7 +234,7 @@ export default function OrganizationPage() {
       <DragOverlay payload={dragPayload} />
       <Breadcrumb />
       <div className="mb-4">
-        <h1 className="text-2xl font-bold">조직관리</h1>
+        <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.025em] text-ink-900">조직관리</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
           조직도와 그 조직도를 이루는 기준정보(부서·직급·직책·직무·호봉)를 한 화면에서 봅니다.
         </p>

@@ -38,7 +38,7 @@ export default function EditEmployeePage({ params }: { params: Promise<{ id: str
   return (
     <div>
       <Breadcrumb />
-      <h1 className="text-2xl font-bold mb-6">사원 수정</h1>
+      <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.025em] text-ink-900 mb-6">사원 수정</h1>
       <EmployeeForm
         employee={employee}
         departments={departments}

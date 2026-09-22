@@ -5,9 +5,9 @@ import { ChevronDown, ChevronRight, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Department } from '@/types';
 
-interface Node {
+export interface DepartmentNode {
   department: Department;
-  children: Node[];
+  children: DepartmentNode[];
   /** 본인 부서 인원 */
   own: number;
   /** 하위 부서까지 합친 인원 — 상위 부서를 고르면 이 수만큼 걸립니다. */
@@ -36,7 +36,7 @@ export function DepartmentTreeFilter({
 }) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
-  const roots = useMemo(() => buildTree(departments, countByDepartment), [departments, countByDepartment]);
+  const roots = useMemo(() => buildDepartmentTree(departments, countByDepartment), [departments, countByDepartment]);
 
   const toggle = (id: string) =>
     setCollapsed((prev) => {
@@ -46,7 +46,7 @@ export function DepartmentTreeFilter({
       return next;
     });
 
-  const renderNode = (node: Node, depth: number) => {
+  const renderNode = (node: DepartmentNode, depth: number) => {
     const isSelected = selectedId === node.department.id;
     const isCollapsed = collapsed.has(node.department.id);
     const hasChildren = node.children.length > 0;
@@ -120,23 +120,23 @@ export function DepartmentTreeFilter({
 }
 
 /** 부서 목록에서 서브트리 인원까지 채운 트리를 만듭니다. */
-function buildTree(departments: Department[], counts: Map<string, number>): Node[] {
+export function buildDepartmentTree(departments: Department[], counts: Map<string, number>): DepartmentNode[] {
   const active = departments.filter((d) => d.is_active);
-  const byId = new Map<string, Node>(
+  const byId = new Map<string, DepartmentNode>(
     active.map((d) => [
       d.id,
       { department: d, children: [], own: counts.get(d.id) ?? 0, total: counts.get(d.id) ?? 0 },
     ]),
   );
 
-  const roots: Node[] = [];
+  const roots: DepartmentNode[] = [];
   for (const node of byId.values()) {
     const parent = node.department.parent_id ? byId.get(node.department.parent_id) : undefined;
     if (parent) parent.children.push(node);
     else roots.push(node);
   }
 
-  const sortAndSum = (node: Node): number => {
+  const sortAndSum = (node: DepartmentNode): number => {
     node.children.sort((a, b) => a.department.sort_order - b.department.sort_order);
     node.total = node.own + node.children.reduce((sum, c) => sum + sortAndSum(c), 0);
     return node.total;

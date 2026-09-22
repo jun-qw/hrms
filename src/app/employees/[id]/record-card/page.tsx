@@ -115,7 +115,7 @@ export default function RecordCardPage({ params }: { params: Promise<{ id: strin
         <Breadcrumb />
       </div>
       <div className="flex items-center justify-between mb-6 no-print">
-        <h1 className="text-2xl font-bold">인사기록카드</h1>
+        <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.025em] text-ink-900">인사기록카드</h1>
         <div className="flex gap-2">
           <Link href={`/employees/${id}`}>
             <Button variant="outline"><ArrowLeft className="h-4 w-4 mr-2" />사원 상세</Button>

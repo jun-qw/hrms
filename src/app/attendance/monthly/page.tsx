@@ -70,7 +70,7 @@ export default function MonthlyAttendancePage() {
   return (
     <div>
       <Breadcrumb />
-      <h1 className="text-2xl font-bold mb-6">월별 근태 현황</h1>
+      <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.025em] text-ink-900 mb-6">월별 근태 현황</h1>
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">

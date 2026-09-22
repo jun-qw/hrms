@@ -30,7 +30,7 @@ export default function PayslipPage({ params }: { params: Promise<{ id: string }
     return (
       <div>
         <Breadcrumb />
-        <h1 className="text-2xl font-bold mb-6">급여명세서</h1>
+        <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.025em] text-ink-900 mb-6">급여명세서</h1>
         <Card>
           <CardContent className="pt-8 pb-8 text-center text-muted-foreground">
             급여 기록을 찾을 수 없습니다.
@@ -53,7 +53,7 @@ export default function PayslipPage({ params }: { params: Promise<{ id: string }
     <div>
       <Breadcrumb />
       <div className="flex items-center justify-between mb-6 no-print">
-        <h1 className="text-2xl font-bold">급여명세서</h1>
+        <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.025em] text-ink-900">급여명세서</h1>
         <Button variant="outline" onClick={() => window.print()}>
           <Printer className="h-4 w-4 mr-2" />
           인쇄

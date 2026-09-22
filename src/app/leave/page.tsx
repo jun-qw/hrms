@@ -56,7 +56,7 @@ export default function LeavePage() {
       <Breadcrumb />
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">휴가관리</h1>
+          <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.025em] text-ink-900">휴가관리</h1>
           {employee && (
             <p className="text-sm text-muted-foreground mt-1">
               {employee.name} ({employee.department} / {employee.position_rank})
