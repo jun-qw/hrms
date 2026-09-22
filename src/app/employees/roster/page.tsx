@@ -111,7 +111,7 @@ export default function WorkerRosterPage() {
       <div className="print-area rounded-md border bg-white p-8">
         <div className="mb-5 flex items-start justify-between">
           <div>
-            <h2 className="text-xl font-bold tracking-tight">노 동 자 명 부</h2>
+            <h2 className="text-xl font-bold tracking-tight">작 업 자 명 부</h2>
             <p className="mt-1 text-xs text-gray-600">
               {company.name}
               {company.business_number && ` · 사업자등록번호 ${company.business_number}`}
